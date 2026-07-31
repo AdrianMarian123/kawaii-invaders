@@ -99,6 +99,20 @@
     filter:drop-shadow(0 3px 0 rgba(120,40,110,.6)) drop-shadow(0 10px 34px rgba(255,143,199,.7));}
   .logo small{display:block;font-size:.22em;letter-spacing:.5em;color:var(--mint);-webkit-text-fill-color:var(--mint);margin-top:10px;font-weight:600;}
   .tag{max-width:460px;font-size:14px;opacity:.85;line-height:1.55;}
+  /* Ecranul CO-OP are cu doua randuri mai mult decat celelalte (codul + starea),
+     asa ca pe telefon in modul orizontal nu incapea. Strangem spatiile doar aici. */
+  #coop{gap:7px;padding:12px 16px;overflow-y:auto;overscroll-behavior:contain;}
+  #coop .big{font-size:clamp(20px,5.6vw,34px);}
+  #coop .tag{font-size:12.5px;line-height:1.35;margin:0;}
+  #coop .cimenu{gap:7px;}
+  #coop .cibtn{padding:9px 18px;font-size:clamp(15px,4.2vw,19px);}
+  #coop #coopCode{gap:3px;}
+  #coop #coopCodeVal{line-height:1.1;}
+  @media (max-height:460px){
+    #coop{gap:5px;padding:8px 16px;}
+    #coop .big{font-size:clamp(18px,4.6vw,26px);}
+    #coop .cibtn{padding:7px 18px;}
+  }
   .btn{font-family:'Baloo 2';font-weight:800;font-size:20px;color:var(--ink);cursor:pointer;border:none;border-radius:999px;
     padding:14px 46px;background:linear-gradient(180deg,#fff,var(--yellow));box-shadow:0 8px 0 #c9a93a,0 16px 28px rgba(0,0,0,.4);transition:transform .08s;}
   .btn:active{transform:translateY(4px);box-shadow:0 4px 0 #c9a93a,0 8px 16px rgba(0,0,0,.4);}
@@ -1156,7 +1170,7 @@ el('optsBack').onclick=()=>{ui.opts.classList.add('hide');ui.menu.classList.remo
 { const b=el('drClaim'); if(b)b.onclick=()=>{ el('dailyReward').classList.add('hide'); }; }
 document.querySelectorAll('.gopt').forEach(b=>b.onclick=()=>{audioInit();applyAspect(b.dataset.k);});
 document.querySelectorAll('.topt').forEach(b=>b.onclick=()=>{ try{audioInit();}catch(e){} setMenuTheme(b.dataset.t); if(snd&&snd.pickup)snd.pickup(); });
-el('coopBack').onclick=()=>{coopReset();el('coopCode').style.display='none';ui.coop.classList.add('hide');ui.menu.classList.remove('hide');};
+el('coopBack').onclick=()=>{coopReset();el('coopCode').style.display='none';showCoopIntro(true);ui.coop.classList.add('hide');ui.menu.classList.remove('hide');};
 // ori de cate ori se deschide ecranul CO-OP, arata adresa salvata
 try{ new MutationObserver(()=>{ if(!ui.coop.classList.contains('hide')){ try{refreshRelayUI();}catch(e){} } })
       .observe(ui.coop, {attributes:true, attributeFilter:['class']}); }catch(e){}
@@ -2117,6 +2131,8 @@ function refreshRelayUI(){
   relayHint(set ? '✓ salvată pe acest dispozitiv' : 'ex: wss://kawaii-relay.onrender.com · se salvează automat', set ? '#7ef9d2' : null);
 }
 function saveRelayFromField(){ const f = el('coopRelay'); return f ? setRelay(f.value) : getRelay(); }
+// textul lung de explicatii nu mai e util odata ce ai codul — il ascundem ca sa incapa codul
+function showCoopIntro(show){ const m = el('coopMsg'); if(m) m.style.display = show ? '' : 'none'; }
 function showRelayBox(open){
   const b = el('coopRelayBox'); if(!b) return;
   b.style.display = open ? 'flex' : 'none';
@@ -2156,6 +2172,8 @@ function startRoom(code,asHost){
   coopReset();
   net.role=asHost?'host':'guest';
   el('coopCode').style.display='flex'; el('coopCodeVal').textContent=code;
+  showCoopIntro(false);
+  try{ el('coopCode').scrollIntoView({block:'nearest'}); }catch(e){}
   setCoopStatus('mă conectez la server...');
   let ws; try{ ws=new WebSocket(RELAY_URL); }catch(e){ setCoopStatus('eroare server: '+e); return; }
   net.ws=ws;
