@@ -502,19 +502,23 @@ body.tsummer .modechip em,body.tsummer .dsSummary{color:#fff4ee}
       <button class="cibtn" id="coopJoin">INTRĂ CU COD</button>
       <button class="cibtn" id="coopBack">înapoi</button>
     </div>
-    <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;max-width:360px">
-      <div class="tag" style="margin:0">🌐 Adresa serverului co-op</div>
-      <input id="coopRelay" type="text" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"
-             placeholder="wss://numele-tau.onrender.com"
-             style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:2px solid rgba(255,255,255,.22);
-                    background:rgba(10,6,22,.55);color:#fff;font-family:'Baloo 2',system-ui,sans-serif;font-size:14px;
-                    font-weight:600;text-align:center;outline:none">
-      <div class="keys" id="coopRelayHint" style="min-height:16px"></div>
-    </div>
     <div id="coopCode" style="display:none;flex-direction:column;gap:8px;align-items:center">
       <div class="tag">Codul tău (trimite-l prietenului):</div>
       <div id="coopCodeVal" style="font-family:'Baloo 2';font-weight:800;font-size:26px;color:var(--yellow);letter-spacing:.15em;user-select:all"></div>
       <div class="keys" id="coopStatus">se așteaptă conectarea...</div>
+    </div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;max-width:360px">
+      <button id="coopRelayToggle" type="button"
+              style="background:none;border:none;color:rgba(255,255,255,.5);font-family:'Baloo 2',system-ui,sans-serif;
+                     font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;padding:4px">⚙️ alt server</button>
+      <div id="coopRelayBox" style="display:none;flex-direction:column;gap:6px;align-items:center;width:100%">
+        <input id="coopRelay" type="text" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"
+               placeholder="wss://numele-tau.onrender.com"
+               style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:2px solid rgba(255,255,255,.22);
+                      background:rgba(10,6,22,.55);color:#fff;font-family:'Baloo 2',system-ui,sans-serif;font-size:14px;
+                      font-weight:600;text-align:center;outline:none">
+        <div class="keys" id="coopRelayHint" style="min-height:16px"></div>
+      </div>
     </div>
   </div>
 
@@ -2113,8 +2117,15 @@ function refreshRelayUI(){
   relayHint(set ? '✓ salvată pe acest dispozitiv' : 'ex: wss://kawaii-relay.onrender.com · se salvează automat', set ? '#7ef9d2' : null);
 }
 function saveRelayFromField(){ const f = el('coopRelay'); return f ? setRelay(f.value) : getRelay(); }
+function showRelayBox(open){
+  const b = el('coopRelayBox'); if(!b) return;
+  b.style.display = open ? 'flex' : 'none';
+  if(open) refreshRelayUI();
+}
 // cablarea câmpului — se face AICI, după ce constantele de mai sus există
 { const f = el('coopRelay');
+  const tg = el('coopRelayToggle');
+  if(tg) tg.onclick = ()=>{ const b = el('coopRelayBox'); showRelayBox(!b || b.style.display === 'none'); };
   if(f){
     f.addEventListener('input', ()=>{ f.style.borderColor='rgba(255,255,255,.22)'; });
     const commit = ()=>{ const n = saveRelayFromField();
@@ -2137,7 +2148,8 @@ function startRoom(code,asHost){
   if(!relayIsSet(RELAY_URL)){
     el('coopCode').style.display='none';
     setCoopStatus('');
-    relayHint('⚠️ Scrie mai întâi adresa serverului în câmpul de sus.', '#ffe46b');
+    showRelayBox(true);
+    relayHint('⚠️ Scrie adresa serverului aici.', '#ffe46b');
     try{ const f=el('coopRelay'); if(f){ f.focus(); f.style.borderColor='#ffe46b'; } }catch(e){}
     return;
   }
