@@ -7,6 +7,7 @@
 'use strict';
 const fs=require('fs'), path=require('path'), vm=require('vm');
 const {spawn}=require('child_process'); const WebSocket=require('ws');
+const { relayPath, relayEnv, relayName } = require('./relay-path');
 const HTML=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const PORT=3997, RELAY='ws://127.0.0.1:'+PORT;
 const A=HTML.indexOf('// ================= ONLINE CO-OP'), B=HTML.indexOf('function update(dt){',A);
@@ -43,8 +44,8 @@ function box(label){
 }
 
 let srv=null;
-const startSrv=()=>{ srv=spawn(process.execPath,[path.join(__dirname,'server-relay.js')],
-  {env:Object.assign({},process.env,{PORT:String(PORT)}),stdio:['ignore','pipe','pipe']});
+const startSrv=()=>{ srv=spawn(process.execPath,[relayPath()],
+  {env:relayEnv({PORT:String(PORT)}),stdio:['ignore','pipe','pipe']});
   srv.stdout.on('data',()=>{}); srv.stderr.on('data',()=>{}); };
 const stopSrv=()=>{ try{srv.kill('SIGKILL');}catch(e){} srv=null; };
 

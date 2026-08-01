@@ -40,10 +40,23 @@ copia din memorie** — fișierul de pe disc nu e atins.
 
 ## Serverul de co-op
 
-`server-relay.js` e o copie a serverului, ținută aici **doar ca testele să poată porni
-unul local**. Serverul adevărat are repo-ul lui:
-<https://github.com/AdrianMarian123/kawaii-relay>. Dacă îl modifici acolo, adu copia și
-aici, altfel testele verifică o versiune veche.
+Serverul adevărat are repo-ul lui: <https://github.com/AdrianMarian123/kawaii-relay>.
+
+Testele **îl folosesc pe el, dacă îl ai clonat alături** — adică `kawaii-relay` lângă
+`kawaii-invaders`, ca în `D:\git\`. Așa verifici serverul care rulează de fapt pe Render,
+nu o copie. `relay-path.js` se ocupă de alegere.
+
+`server-relay.js` din dosarul ăsta e doar plasa de siguranță: pe un calculator fără clona
+serverului, testele merg mai departe pe copie. La pornire îți spune pe care l-a folosit:
+
+```
+server de test: serverul adevărat (kawaii-relay)
+server de test: copia din dosar
+```
+
+Dacă cele două ajung să difere, testele rulează pe cel **adevărat** și îți scriu un
+avertisment cu comanda exactă de sincronizare. Nu mai poți verifica din greșeală o
+versiune veche fără să afli.
 
 ## Invariantul de care atârnă scorul
 

@@ -7,6 +7,7 @@
  */
 'use strict';
 const fs=require('fs'), path=require('path'), {JSDOM}=require('jsdom'), {spawn}=require('child_process');
+const { relayPath, relayEnv, relayName } = require('./relay-path');
 const PORT=3998, RELAY='ws://127.0.0.1:'+PORT;
 const raw=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const BRIDGE=`window.__dbg={hitTeam,collect,activeShips,fireAllShips,startGame,spawnPickup,
@@ -67,8 +68,8 @@ function boot(label){
 }
 
 (async()=>{
-  const srv=spawn(process.execPath,[path.join(__dirname,'server-relay.js')],
-    {env:Object.assign({},process.env,{PORT:String(PORT)}),stdio:['ignore','pipe','pipe']});
+  const srv=spawn(process.execPath,[relayPath()],
+    {env:relayEnv({PORT:String(PORT)}),stdio:['ignore','pipe','pipe']});
   srv.stdout.on('data',noop); srv.stderr.on('data',d=>console.error('[srv]',String(d).trim()));
   const bye=c=>{ try{srv.kill();}catch(e){} process.exit(c); };
   await wait(700);

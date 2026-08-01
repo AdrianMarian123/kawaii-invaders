@@ -10,6 +10,7 @@ const path = require('path');
 const vm = require('vm');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
+const { relayPath, relayEnv, relayName } = require('./relay-path');
 
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const PORT = 3999;
@@ -81,8 +82,9 @@ function makeSandbox(label, store) {
 }
 
 // ---- pornire server ------------------------------------------------------
-const srv = spawn(process.execPath, [path.join(__dirname, 'server-relay.js')], {
-  env: Object.assign({}, process.env, { PORT: String(PORT) }), stdio: ['ignore', 'pipe', 'pipe']
+console.log('server de test:', relayName());
+const srv = spawn(process.execPath, [relayPath()], {
+  env: relayEnv({ PORT: String(PORT) }), stdio: ['ignore', 'pipe', 'pipe']
 });
 srv.stdout.on('data', () => {});
 srv.stderr.on('data', d => console.error('[srv]', String(d).trim()));
