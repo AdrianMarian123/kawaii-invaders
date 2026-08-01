@@ -1,0 +1,22 @@
+{
+  "name": "kawaii-invaders-coop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Teste pentru co-op-ul din Kawaii Invaders. O data: npm install. Apoi: npm test.",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:joc",
+    "test:unit": "node e2e.js && node etapa1-test.js && node etapa2-test.js && node etapa3-test.js && node reconect-test.js",
+    "test:joc": "node smoke.js && node coop-smoke.js",
+    "test:e2e": "node e2e.js",
+    "test:etapa1": "node etapa1-test.js",
+    "test:etapa2": "node etapa2-test.js",
+    "test:etapa3": "node etapa3-test.js",
+    "test:reconect": "node reconect-test.js",
+    "test:fum": "node smoke.js",
+    "test:fum-coop": "node coop-smoke.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "jsdom": "^26.0.0"
+  }
+}
