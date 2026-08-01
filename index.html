@@ -2093,11 +2093,36 @@ let last=performance.now();
 function loop(now){ let dt=(now-last)/1000; last=now; dt=Math.min(dt,0.05);
   if(hitstop>0){hitstop-=dt; dt*=0.15;}
   try{ if(state==='playing')update(dt); draw(); }
-  catch(err){ console.error('frame error:',err); }
+  catch(err){ console.error('frame error:',err); try{ showFatal('cadru: '+((err&&err.message)||err)); }catch(_){} }
   requestAnimationFrame(loop);
 }
 // ================= ONLINE CO-OP (own WebSocket relay) =================
 // ▼▼▼ PUNE AICI ADRESA SERVERULUI TĂU (după ce îl pui pe Render) ▼▼▼
+// Pe telefon nu ai consola de erori. Cand ceva crapa, il aratam pe ecran, o singura data,
+// ca sa se poata citi si raporta in loc sa ghicim.
+let _fatalSeen = '';
+function showFatal(msg){
+  msg = String(msg || 'eroare necunoscuta');
+  if(_fatalSeen === msg) return;            // acelasi mesaj la 60 de cadre pe secunda — il aratam o data
+  _fatalSeen = msg;
+  try{
+    let d = document.getElementById('errBox');
+    if(!d){
+      d = document.createElement('div'); d.id = 'errBox';
+      d.style.cssText = 'position:fixed;left:6px;right:6px;top:6px;z-index:99999;background:rgba(140,10,40,.95);'
+        + 'color:#fff;font:600 12px/1.4 system-ui,sans-serif;padding:10px 12px;border-radius:10px;'
+        + 'white-space:pre-wrap;max-height:46vh;overflow:auto;user-select:text;-webkit-user-select:text';
+      d.onclick = ()=>{ d.remove(); _fatalSeen = ''; };
+      document.body.appendChild(d);
+    }
+    d.textContent = '⚠ ' + msg + '\n\n(atinge ca să închizi)';
+  }catch(e){}
+}
+try{
+  window.addEventListener('error', e=>showFatal((e.message||'eroare') + ' @ linia ' + (e.lineno||'?')));
+  window.addEventListener('unhandledrejection', e=>showFatal('promisiune: ' + ((e.reason && e.reason.message) || e.reason)));
+}catch(e){}
+
 const DEFAULT_RELAY = 'wss://kawaii-relay.onrender.com';
 const RELAY_KEY = 'kw_relay_url';
 // accepta orice forma (https://, http://, sau doar domeniul) si o normalizeaza la ws/wss
@@ -2210,7 +2235,8 @@ function netSnapshot(){
   const en=enemies.slice(0,60).map(e=>({x:P((e.x||0)/iw),y:P((e.y||0)/ih),r:P((e.r||14)/ih),ty:e.type||'bird',ac:e.acc||0,bo:e.boss?1:0,uf:e.ufo?1:0,hr:Math.max(0,Math.min(1,(e.hp||0)/(e.maxHp||1))),bl:e.blink<0?1:0,nm:(e.boss&&e.name)?e.name:0,co:(e.boss&&e.col)?e.col:0}));
   const eb=eBullets.slice(0,90).map(b=>({x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||7)/ih),c:b.color||'#ffd1f0',k:b.bk||'drop'}));
   const pb=bullets.slice(0,40).map(b=>({x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
-  const pk=pickups.slice(0,24).map(p=>({x:P((p.x||0)/iw),y:P((p.y||0)/ih),ty:p.type||'coin'}));
+  const pk=pickups.slice(0,24).map(p=>({x:P((p.x||0)/iw),y:P((p.y||0)/ih),ty:p.type||'coin',
+    tr:p.tier||0, w:p.weapon||0}));
   const snap={t:'s',sc:score|0,wv:wave|0,lv:player.lives|0,cm:mult||1,
     p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,
     fl:(flash>0&&flashCol)?flashCol:0};
@@ -2227,9 +2253,11 @@ function applySnapshot(m){
   if(state!=='playing')enterGuestPlay();
   score=m.sc; wave=m.wv; player.lives=m.lv; mult=m.cm; waveActive=true;
   enemies=(m.en||[]).map(e=>({x:e.x*W,y:e.y*H,r:e.r*H,type:e.ty,acc:e.ac||null,boss:!!e.bo,ufo:!!e.uf,hp:e.hr,maxHp:1,t:performance.now()/1000,blink:e.bl?-1:1,hit:0,name:e.nm||'',col:e.co||'#ffffff',enrage:e.hr<0.34}));
-  eBullets=(m.eb||[]).map(b=>({x:b.x*W,y:b.y*H,r:b.r*H,color:b.c,bk:b.k,t:0}));
-  bullets=(m.pb||[]).map(b=>({x:b.x*W,y:b.y*H,r:b.r*H,color:b.c,type:b.ty}));
-  pickups=(m.pk||[]).map(p=>({x:p.x*W,y:p.y*H,type:p.ty,r:15,t:0}));
+  eBullets=(m.eb||[]).map(b=>({x:b.x*W,y:b.y*H,r:b.r*H,color:b.c,bk:b.k,t:0,vx:0,vy:240}));
+  bullets=(m.pb||[]).map(b=>({x:b.x*W,y:b.y*H,r:b.r*H,color:b.c,type:b.ty,vx:0,vy:-880,spin:0}));
+  pickups=(m.pk||[]).map(p=>({x:p.x*W,y:p.y*H,type:p.ty,r:15,t:0,
+    tier:p.tr||0,
+    weapon:(p.w && WEAPONS && WEAPONS[p.w]) ? p.w : Object.keys(WEAPONS||{pulse:1})[0]}));
   p2.x=m.p1x*W; p2.y=m.p1y*H; p2.active=true;
   if(m.fl){flash=0.3;flashCol=m.fl;}
   if(m.bt!==undefined){ bossIntro=INTRO_DUR-m.bt; introBoss={type:m.bty,name:m.bnm,col:m.bco,acc:m.bac||null,leafBoss:!!m.blf,style:m.bst||0,slammed:true}; } else bossIntro=0;
