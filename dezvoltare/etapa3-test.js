@@ -3,8 +3,9 @@
  * Extrage functia REALA collect() din index-ACTUAL-v66.html.
  */
 'use strict';
-const fs=require('fs'), path=require('path'), vm=require('vm');
-const HTML=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const vm=require('vm');
+const { loadGameHtml } = require('./load-game');
+const HTML=loadGameHtml();
 const START='// Cadoul îl ia nava care l-a atins';
 const END='// COMBAT';
 const a=HTML.indexOf(START), b=HTML.indexOf(END,a);

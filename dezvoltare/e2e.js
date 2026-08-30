@@ -5,14 +5,13 @@
  * schimbul de date host<->guest.
  */
 'use strict';
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { relayPath, relayEnv, relayName } = require('./relay-path');
+const { loadGameHtml } = require('./load-game');
 
-const HTML = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const HTML = loadGameHtml();
 const PORT = 3999;
 const RELAY = 'ws://127.0.0.1:' + PORT;
 

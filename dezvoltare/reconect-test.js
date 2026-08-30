@@ -5,10 +5,11 @@
  *  B. serverul pica in timpul jocului -> revine -> amandoi trebuie sa se reconecteze
  */
 'use strict';
-const fs=require('fs'), path=require('path'), vm=require('vm');
+const vm=require('vm');
 const {spawn}=require('child_process'); const WebSocket=require('ws');
 const { relayPath, relayEnv, relayName } = require('./relay-path');
-const HTML=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const { loadGameHtml } = require('./load-game');
+const HTML=loadGameHtml();
 const PORT=3997, RELAY='ws://127.0.0.1:'+PORT;
 const A=HTML.indexOf('// ================= ONLINE CO-OP'), B=HTML.indexOf('function update(dt){',A);
 const SRC=HTML.slice(A,B);

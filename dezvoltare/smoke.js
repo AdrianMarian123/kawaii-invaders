@@ -3,8 +3,8 @@
  * cateva sute de cadre in modul cu un singur jucator. Orice exceptie = esec.
  */
 'use strict';
-const fs=require('fs'), path=require('path'), {JSDOM}=require('jsdom');
-const file=path.join(__dirname,'..','index.html');
+const {JSDOM}=require('jsdom');
+const { loadGameHtml } = require('./load-game');
 const errors=[];
 
 const noop=()=>{};
@@ -22,7 +22,7 @@ const ctx2d=new Proxy({},{get(t,k){
   return noop;
 },set(t,k,v){t[k]=v;return true;}});
 
-const dom=new JSDOM(fs.readFileSync(file,'utf8'),{
+const dom=new JSDOM(loadGameHtml(),{
   runScripts:'dangerously', pretendToBeVisual:true, url:'https://local.test/',
   beforeParse(w){
     w.HTMLCanvasElement.prototype.getContext=()=>ctx2d;

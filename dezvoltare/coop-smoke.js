@@ -6,10 +6,11 @@
  * Injecteaza o punte __dbg spre interiorul IIFE-ului — doar in copia de test.
  */
 'use strict';
-const fs=require('fs'), path=require('path'), {JSDOM}=require('jsdom'), {spawn}=require('child_process');
+const {JSDOM}=require('jsdom'), {spawn}=require('child_process');
 const { relayPath, relayEnv, relayName } = require('./relay-path');
+const { loadGameHtml } = require('./load-game');
 const PORT=3998, RELAY='ws://127.0.0.1:'+PORT;
-const raw=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const raw=loadGameHtml();
 const BRIDGE=`window.__dbg={hitTeam,collect,activeShips,fireAllShips,startGame,spawnPickup,
   get p2(){return p2}, get player(){return player}, get state(){return state},
   get score(){return score}, get net(){return net}, get enemies(){return enemies},

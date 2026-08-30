@@ -1,5 +1,6 @@
-const fs=require('fs'),vm=require('vm');
-const H=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
+const vm=require('vm');
+const { loadGameHtml } = require('./load-game');
+const H=loadGameHtml();
 const A=H.indexOf('// ================= ONLINE CO-OP'), B=H.indexOf('function update(dt){',A);
 const SRC=H.slice(A,B);
 let pass=0,fail=0; const ok=(c,m)=>{c?(pass++,console.log('  OK  ',m)):(fail++,console.log('  FAIL',m));};
