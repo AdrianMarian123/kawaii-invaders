@@ -1,0 +1,29 @@
+# Ruleaza suita de teste automate din dezvoltare/ pe orice PR spre main.
+# Deployul (pages.yml) ramane neschimbat: doar push pe main, fara nicio legatura cu asta.
+name: Teste
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ia fisierele din repo
+        uses: actions/checkout@v4
+
+      - name: Instaleaza Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dezvoltare/package-lock.json
+
+      - name: Instaleaza dependintele de test
+        working-directory: dezvoltare
+        run: npm install
+
+      - name: Ruleaza testele
+        working-directory: dezvoltare
+        run: npm test
