@@ -31,10 +31,10 @@ function relayPath() {
   return REAL;
 }
 
-/** Serverul adevărat nu-și are pachetele instalate; îi împrumutăm `ws` de aici. */
+/** Serverul adevărat nu-și are pachetele instalate; îi împrumutăm `ws` din rădăcină. */
 function relayEnv(extra) {
   return Object.assign({}, process.env, {
-    NODE_PATH: path.join(__dirname, 'node_modules')
+    NODE_PATH: path.join(__dirname, '..', 'node_modules')
   }, extra || {});
 }
 

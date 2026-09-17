@@ -23,3 +23,21 @@ Serverul doar transportă mesajele între cei doi.
 
 Dacă vrei alt server, ecranul CO-OP are un câmp pentru adresă. Poți folosi și
 `?relay=adresa-ta` în link.
+
+## Dezvoltare
+
+Cod sursă în module ES, sub `src/`; build cu Vite.
+
+```
+npm install       # o singura data
+npm run dev       # server de dezvoltare, cu reload instant
+npm run build     # construieste in dist/ (asta se publica pe Pages)
+npm run preview   # serveste dist/ local, ca sa verifici build-ul
+npm test          # ruleaza suita de teste din dezvoltare/
+```
+
+## Android (Google Play)
+
+Jocul se poate ambala și ca aplicație Android nativă, cu Capacitor —
+`android/` e proiectul generat. Vezi [GHID-PLAY-STORE.md](GHID-PLAY-STORE.md)
+pentru pașii de la build până la publicare pe Play Store.

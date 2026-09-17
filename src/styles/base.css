@@ -1,0 +1,130 @@
+  :root{
+    --pink:#ff8fc7; --mint:#7ef9d2; --yellow:#ffe46b; --blue:#8fd3ff; --purple:#c89bff; --ink:#241038;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+  html,body{height:100%;overflow:hidden;background:#0a0518;font-family:'Fredoka',system-ui,sans-serif;color:#fff;}
+  #rotate{position:fixed;inset:0;z-index:99990;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;
+    background:radial-gradient(circle at 50% 40%, #43205f 0%, #1a0c33 55%, #0a0518 100%);}
+  #rotate .rphone{font-size:80px;line-height:1;animation:rotw 2s ease-in-out infinite;transform-origin:50% 50%;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));}
+  #rotate .rtxt{font:800 27px/1.1 'Baloo 2',system-ui,sans-serif;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4);}
+  #rotate .rsub{font:600 15px/1.45 'Fredoka',system-ui,sans-serif;color:#ffd9ef;opacity:.92;}
+  @keyframes rotw{0%,18%{transform:rotate(0)}58%,78%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+  @media (orientation: portrait) and (pointer: coarse){ #rotate{display:flex;} }
+  #wrap{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:100vw;height:100vh;height:100dvh;overflow:hidden;
+    box-shadow:0 0 60px rgba(0,0,0,.6);}
+  canvas{display:block;width:100%;height:100%;touch-action:none;}
+  .baloo{font-family:'Baloo 2',sans-serif;}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;pointer-events:none;}
+  .topbar{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:10px 14px;gap:8px;}
+  .glass{background:rgba(36,16,56,.5);backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,.16);border-radius:16px;}
+  .stat{padding:5px 12px;line-height:1.02;}
+  .stat .lbl{font-size:9px;letter-spacing:.14em;opacity:.65;text-transform:uppercase;}
+  .stat .val{font-size:19px;font-weight:700;font-family:'Baloo 2';}
+  #comboTag{font-family:'Baloo 2';font-weight:800;font-size:15px;color:var(--yellow);
+    opacity:0;transition:opacity .2s,transform .2s;text-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .center-top{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .sectorTag{font-size:11px;font-weight:600;color:var(--ink);background:linear-gradient(120deg,#fff,var(--yellow));
+    border-radius:999px;padding:3px 13px;font-family:'Baloo 2';}
+  .lives{display:flex;gap:3px;font-size:17px;}
+  #weaponbar{display:none;}
+  #achvWrap{position:absolute;left:12px;top:84px;display:flex;flex-direction:column;gap:6px;z-index:6;pointer-events:none;max-width:74vw;}
+  .achvPop{display:flex;align-items:center;gap:9px;padding:7px 13px 7px 9px;border-radius:14px;
+    background:linear-gradient(180deg,rgba(48,24,70,.94),rgba(22,11,36,.94));border:2px solid var(--yellow);
+    box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 18px rgba(255,228,107,.45);animation:achvIn .4s cubic-bezier(.2,1.4,.5,1);}
+  .achvPop .ic{font-size:23px;line-height:1;}
+  .achvPop .tx b{display:block;font-family:'Baloo 2';font-size:10px;letter-spacing:.18em;color:var(--yellow);}
+  .achvPop .tx small{font-family:'Baloo 2';font-weight:700;font-size:14px;color:#fff;}
+  @keyframes achvIn{from{transform:translateX(-115%);opacity:0;}to{transform:none;opacity:1;}}
+  @keyframes achvOut{to{transform:translateX(-115%);opacity:0;}}
+  .wpill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:11px;display:flex;align-items:center;gap:6px;
+    background:rgba(36,16,56,.5);border:1.5px solid rgba(255,255,255,.12);}
+  .wbar{width:54px;height:6px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden;}
+  .wbar i{display:block;height:100%;border-radius:4px;transition:width .2s;}
+  #rightbtns{position:absolute;top:48px;right:14px;display:flex;flex-direction:column;gap:8px;pointer-events:auto;z-index:94;}
+  .iconbtn{width:40px;height:40px;border-radius:13px;color:#fff;font-size:16px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.18);background:rgba(36,16,56,.5);}
+  #touchpad{position:absolute;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(env(safe-area-inset-bottom, 0px) + 20px);display:none;flex-direction:column;gap:14px;align-items:center;pointer-events:none;z-index:7;}
+  .tbtn{pointer-events:auto;width:62px;height:62px;border-radius:50%;font-size:23px;font-weight:700;color:var(--ink);
+    border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 0 rgba(0,0,0,.3);position:relative;}
+  .tbtn:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.3);}
+  .perkcard{width:142px;min-height:152px;border:2px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(160deg,#3a2a5e,#241640);box-shadow:0 6px 0 rgba(0,0,0,.35);color:#fff;padding:16px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;font-family:inherit;}
+  .perkcard:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.35);}
+  #btnMissile{background:linear-gradient(160deg,#bfeaff,var(--blue));}
+  #btnBurst{background:linear-gradient(160deg,#ffd98a,#ff8a3b);}
+  .tcount{position:absolute;top:-3px;right:-3px;background:var(--ink);color:#fff;font-size:11px;border-radius:999px;padding:1px 6px;font-family:'Baloo 2';}
+
+  /* ---------- overlays ---------- */
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;gap:14px;z-index:90;}
+  #menu,#opts{justify-content:flex-start;overflow-y:auto;padding-top:30px;padding-bottom:30px;}
+  .screen.hide{display:none;}
+  .veil{position:absolute;inset:0;background:radial-gradient(130% 100% at 50% 0%,rgba(90,40,140,.4),rgba(10,5,24,.94));}
+  .fxveil{background:radial-gradient(120% 92% at 50% 40%,rgba(10,5,24,.12),rgba(8,4,20,.8));}
+  .hello{font-family:'Baloo 2';font-weight:700;color:var(--pink);font-size:clamp(15px,4.6vw,20px);
+    text-shadow:0 2px 12px rgba(0,0,0,.6);margin-top:-4px;}
+  .cimenu{display:flex;flex-direction:column;gap:11px;width:min(330px,82vw);}
+  .cibtn{font-family:'Baloo 2';font-weight:800;font-size:clamp(17px,5vw,21px);color:#fff;cursor:pointer;
+    padding:13px 20px;border-radius:999px;border:2px solid rgba(255,143,199,.55);letter-spacing:.04em;
+    background:linear-gradient(180deg,rgba(255,143,199,.22),rgba(120,40,110,.36));
+    box-shadow:0 0 18px rgba(255,143,199,.22),inset 0 1px 0 rgba(255,255,255,.25);
+    text-shadow:0 2px 8px rgba(0,0,0,.55);transition:transform .1s,box-shadow .15s,background .15s;}
+  .cibtn:hover{background:linear-gradient(180deg,rgba(255,143,199,.42),rgba(150,50,130,.5));box-shadow:0 0 28px rgba(255,143,199,.5),inset 0 1px 0 rgba(255,255,255,.3);}
+  .cibtn:active{transform:translateY(2px);}
+  .cibtn.go{border-color:rgba(126,249,210,.7);background:linear-gradient(180deg,rgba(126,249,210,.28),rgba(36,120,100,.42));
+    box-shadow:0 0 24px rgba(126,249,210,.4),inset 0 1px 0 rgba(255,255,255,.3);}
+  .cibtn.go:hover{background:linear-gradient(180deg,rgba(126,249,210,.5),rgba(46,140,116,.55));box-shadow:0 0 34px rgba(126,249,210,.6),inset 0 1px 0 rgba(255,255,255,.35);}
+  .screen>*{position:relative;z-index:1;}
+  .logo{font-family:'Baloo 2';font-weight:800;font-size:clamp(40px,13vw,90px);line-height:.88;letter-spacing:.01em;
+    background:linear-gradient(180deg,#fff 8%,var(--pink) 52%,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 0 rgba(120,40,110,.6)) drop-shadow(0 10px 34px rgba(255,143,199,.7));}
+  .logo small{display:block;font-size:.22em;letter-spacing:.5em;color:var(--mint);-webkit-text-fill-color:var(--mint);margin-top:10px;font-weight:600;}
+  .tag{max-width:460px;font-size:14px;opacity:.85;line-height:1.55;}
+  /* Ecranul CO-OP are cu doua randuri mai mult decat celelalte (codul + starea),
+     asa ca pe telefon in modul orizontal nu incapea. Strangem spatiile doar aici. */
+  #coop{gap:7px;padding:12px 16px;overflow-y:auto;overscroll-behavior:contain;}
+  #coop .big{font-size:clamp(20px,5.6vw,34px);}
+  #coop .tag{font-size:12.5px;line-height:1.35;margin:0;}
+  #coop .cimenu{gap:7px;}
+  #coop .cibtn{padding:9px 18px;font-size:clamp(15px,4.2vw,19px);}
+  #coop #coopCode{gap:3px;}
+  #coop #coopCodeVal{line-height:1.1;}
+  @media (max-height:460px){
+    #coop{gap:5px;padding:8px 16px;}
+    #coop .big{font-size:clamp(18px,4.6vw,26px);}
+    #coop .cibtn{padding:7px 18px;}
+  }
+  /* Acelasi necaz pe ecranul de final: butonul "meniu" exista, dar cadea sub marginea
+     ecranului in modul orizontal, asa ca nimeni nu-l vedea. */
+  #over{overflow-y:auto;overscroll-behavior:contain;padding:10px 12px;}
+  #over .pcard{padding:16px 22px 14px;gap:8px;}
+  @media (max-height:560px){
+    #over .pcard{gap:6px;padding:10px 16px 10px;border-radius:20px;}
+    #over .ptitle{font-size:clamp(17px,4.4vh,24px);}
+    #over .scorebig b{font-size:clamp(22px,6vh,34px);}
+    #over .chips{gap:4px;}
+    #over .btn{padding:8px 16px;font-size:15px;}
+  }
+  .btn{font-family:'Baloo 2';font-weight:800;font-size:20px;color:var(--ink);cursor:pointer;border:none;border-radius:999px;
+    padding:14px 46px;background:linear-gradient(180deg,#fff,var(--yellow));box-shadow:0 8px 0 #c9a93a,0 16px 28px rgba(0,0,0,.4);transition:transform .08s;}
+  .btn:active{transform:translateY(4px);box-shadow:0 4px 0 #c9a93a,0 8px 16px rgba(0,0,0,.4);}
+  .btn.ghost{background:rgba(255,255,255,.1);color:#fff;box-shadow:none;border:2px solid rgba(255,255,255,.25);font-size:15px;padding:11px 30px;}
+  .keys{font-size:12px;opacity:.7;line-height:1.9;}
+  .keys b{background:rgba(255,255,255,.13);border-radius:6px;padding:2px 7px;font-weight:600;}
+  .legend{display:flex;flex-wrap:wrap;gap:7px 14px;justify-content:center;max-width:500px;font-size:12px;opacity:.88;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .dot{width:13px;height:13px;border-radius:5px;display:inline-block;}
+  .big{font-family:'Baloo 2';font-size:clamp(30px,9vw,56px);font-weight:800;}
+  .scoreline{font-size:16px;opacity:.92;}
+  .scoreline b{color:var(--yellow);font-size:28px;font-family:'Baloo 2';}
+  /* story */
+  #story .crawl{max-width:520px;min-height:120px;font-size:clamp(15px,4.4vw,20px);line-height:1.7;font-weight:500;}
+  #story .crawl .by{color:var(--mint);font-weight:600;}
+  /* banners */
+  #banner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;z-index:4;}
+  #banner .inner{font-family:'Baloo 2';font-size:clamp(26px,8vw,54px);font-weight:800;text-align:center;text-shadow:0 4px 34px rgba(0,0,0,.6);}
+  #banner .sub{font-size:.4em;font-weight:600;color:var(--mint);letter-spacing:.22em;}
+  #toast{z-index:96;position:absolute;left:50%;top:64px;transform:translateX(-50%);font-family:'Baloo 2';font-weight:800;
+    font-size:18px;opacity:0;pointer-events:none;z-index:4;text-shadow:0 2px 10px rgba(0,0,0,.6);}

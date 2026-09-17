@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kawaii Invaders</string>
+    <string name="title_activity_main">Kawaii Invaders</string>
+    <string name="package_name">com.kawaiiinvaders.game</string>
+    <string name="custom_url_scheme">com.kawaiiinvaders.game</string>
+</resources>

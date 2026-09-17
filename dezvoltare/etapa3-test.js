@@ -1,89 +1,80 @@
 /**
  * Etapa 3: obiectele de pe jos merg la nava care le-a atins.
- * Extrage functia REALA collect() din index-ACTUAL-v66.html.
+ * Ruleaza collect() din jocul REAL (prin __dbg), cu bucla oprita.
  */
 'use strict';
-const vm=require('vm');
-const { loadGameHtml } = require('./load-game');
-const HTML=loadGameHtml();
-const START='// Cadoul îl ia nava care l-a atins';
-const END='// COMBAT';
-const a=HTML.indexOf(START), b=HTML.indexOf(END,a);
-if(a<0||b<0){ console.error('nu gasesc collect()'); process.exit(1); }
-const SRC=HTML.slice(a,b);
+const { pornesteJocul } = require('./mediu-joc');
 let pass=0,fail=0; const ok=(c,m)=>{c?(pass++,console.log('  OK  ',m)):(fail++,console.log('  FAIL',m));};
 
+const LVL0={pulse:0,scatter:0,laser:0,arc:0,boomer:0,plasma:0,storm:0,wave:0,vulcan:0,rifle:0};
 const mkShip=o=>Object.assign({x:300,y:1000,r:19,weapon:'pulse',
-  lvl:{pulse:1,scatter:0,laser:0,arc:0,boomer:0,plasma:0,storm:0,wave:0,vulcan:0,rifle:0},
+  lvl:Object.assign({},LVL0,{pulse:1}),
   missiles:3,burst:1,burstT:0,wingmen:0,shield:0,magnet:0,lives:3,dead:false,score:0,coins:0},o);
 
-function ctx(player,p2){
-  const g={Math,JSON,console:{log(){},error(){}},
-    player,p2, particles:[], floaters:[], score:0, combo:0, comboT:0, mult:1, frenzyT:0,
-    runStats:{coins:0,gems:0,maxMult:1},
-    COIN_TIERS:[{cur:1,pts:[100,100],col:'#ffe46b'},{cur:2,pts:[200,200],col:'#ffe46b'},
-                {cur:5,pts:[400,400],col:'#ffe46b'},{cur:20,pts:[900,900],col:'#9fe9ff',gem:1}],
-    WEAPONS:{pulse:{name:'pulse',color:'#f0f'},scatter:{name:'scatter',color:'#ff0'},laser:{name:'laser',color:'#0ff'}},
-    snd:{pickup(){},coin(){}}, rand:(a,b)=>(a+b)/2, TAU:Math.PI*2,
-    part:(x,y)=>({x,y}), toast(t){ g._toasts.push(t); }, confetti(){}, boom(){},
-    clamp:(v,a,b)=>Math.max(a,Math.min(b,v)), updateHUD(){}, scoreMul:1,
-    _toasts:[], frenzy:0, flash:0, flashCol:'', shake(){}, floaters:[],
-  };
-  g.window=g; vm.createContext(g); new vm.Script(SRC).runInContext(g); return g;
-}
+(async()=>{
+  const J=await pornesteJocul({faraBucla:true});
+  const d=J.dbg, w=J.w;
+  Math.random=()=>0.5;
 
-console.log('\n=== Etapa 3: cadourile merg la nava care le-a atins ===');
+  function caz(pl,p2){
+    Object.assign(d.player, mkShip(pl||{}));
+    Object.assign(d.p2, mkShip(p2||{}));
+    d.net.mode='host'; d.p2.active=true;
+    d.set.score(0); d.set.combo(0); d.set.mult(1); d.set.frenzyT(0);
+    Object.assign(d.runStats,{coins:0,gems:0,maxMult:1});
+    w.__toasts.length=0; J.doc.getElementById('toast').textContent='';
+  }
+  // toast() scrie sincron in #toast; citim direct elementul
+  const ultimulToast=()=>String(J.doc.getElementById('toast').textContent||'');
 
-// --- arma din cadou schimba doar nava care l-a cules ---
-{
-  const player=mkShip({}), p2=mkShip({});
-  const g=ctx(player,p2);
-  g.collect({x:0,y:0,type:'gift',weapon:'scatter'}, p2);
-  ok(p2.weapon==='scatter', 'P2 primește arma din cadou: '+p2.weapon);
-  ok(player.weapon==='pulse', 'gazda rămâne cu arma ei: '+player.weapon);
-  ok(g._toasts[0].startsWith('P2 · '), 'anunțul spune a cui e cadoul: "'+g._toasts[0]+'"');
-}
-// --- nivelul creste doar la nava respectiva ---
-{
-  const player=mkShip({weapon:'scatter',lvl:Object.assign(mkShip({}).lvl,{scatter:4})});
-  const p2=mkShip({weapon:'scatter',lvl:Object.assign(mkShip({}).lvl,{scatter:4})});
-  const g=ctx(player,p2);
-  g.collect({x:0,y:0,type:'gift',weapon:'scatter'}, player);
-  ok(player.lvl.scatter===5&&p2.lvl.scatter===4, 'nivelul urcă doar la gazdă: '+player.lvl.scatter+' / '+p2.lvl.scatter);
-}
-// --- scut, magnet, viata, rachete, coleg ---
-{
-  const player=mkShip({}), p2=mkShip({});
-  const g=ctx(player,p2);
-  g.collect({x:0,y:0,type:'shield'}, p2);
-  g.collect({x:0,y:0,type:'magnet'}, p2);
-  g.collect({x:0,y:0,type:'life'}, p2);
-  g.collect({x:0,y:0,type:'missile'}, p2);
-  g.collect({x:0,y:0,type:'wing'}, p2);
-  ok(p2.shield===9&&player.shield===0, 'scutul e al lui P2');
-  ok(p2.magnet===9&&player.magnet===0, 'magnetul e al lui P2');
-  ok(p2.lives===4&&player.lives===3, 'viața extra e a lui P2: '+p2.lives+' / '+player.lives);
-  ok(p2.missiles===5&&player.missiles===3, 'rachetele sunt ale lui P2: '+p2.missiles+' / '+player.missiles);
-  ok(p2.wingmen===1&&player.wingmen===0, 'colegul e al lui P2');
-}
-// --- monede: punga navei + totalul comun ---
-{
-  const player=mkShip({}), p2=mkShip({});
-  const g=ctx(player,p2);
-  g.collect({x:0,y:0,type:'coin',tier:0}, player);
-  g.collect({x:0,y:0,type:'coin',tier:2}, p2);
-  ok(player.coins===1&&p2.coins===5, 'fiecare navă își strânge monedele: '+player.coins+' / '+p2.coins);
-  ok(g.runStats.coins===6, 'totalul rundei le însumează: '+g.runStats.coins);
-  ok(player.score>0&&p2.score>0&&player.score!==p2.score, 'scorurile cresc separat: '+player.score+' / '+p2.score);
-  ok(g.score===player.score+p2.score, 'scorul comun e suma celor două: '+g.score);
-}
-// --- un singur jucator: collect(p) fara nava merge la player ---
-{
-  const player=mkShip({}), p2=mkShip({});
-  const g=ctx(player,p2);
-  g.collect({x:0,y:0,type:'shield'});
-  ok(player.shield===9&&p2.shield===0, 'apelul vechi collect(p) merge tot la jucător');
-  ok(g._toasts[0].indexOf('P2')<0, 'și nu pune eticheta P2 pe anunț');
-}
-console.log('\n=== '+pass+' treceri, '+fail+' eșecuri ===');
-process.exit(fail?1:0);
+  console.log('\n=== Etapa 3: cadourile merg la nava care le-a atins ===');
+
+  // --- arma din cadou schimba doar nava care l-a cules ---
+  {
+    caz();
+    d.collect({x:0,y:0,type:'gift',weapon:'scatter'}, d.p2);
+    ok(d.p2.weapon==='scatter', 'P2 primește arma din cadou: '+d.p2.weapon);
+    ok(d.player.weapon==='pulse', 'gazda rămâne cu arma ei: '+d.player.weapon);
+    ok(ultimulToast().startsWith('P2 · '), 'anunțul spune a cui e cadoul: "'+ultimulToast()+'"');
+  }
+  // --- nivelul creste doar la nava respectiva ---
+  {
+    caz({weapon:'scatter',lvl:Object.assign({},LVL0,{scatter:4})},
+        {weapon:'scatter',lvl:Object.assign({},LVL0,{scatter:4})});
+    d.collect({x:0,y:0,type:'gift',weapon:'scatter'}, d.player);
+    ok(d.player.lvl.scatter===5&&d.p2.lvl.scatter===4, 'nivelul urcă doar la gazdă: '+d.player.lvl.scatter+' / '+d.p2.lvl.scatter);
+  }
+  // --- scut, magnet, viata, rachete, coleg ---
+  {
+    caz();
+    d.collect({x:0,y:0,type:'shield'}, d.p2);
+    d.collect({x:0,y:0,type:'magnet'}, d.p2);
+    d.collect({x:0,y:0,type:'life'}, d.p2);
+    d.collect({x:0,y:0,type:'missile'}, d.p2);
+    d.collect({x:0,y:0,type:'wing'}, d.p2);
+    ok(d.p2.shield===9&&d.player.shield===0, 'scutul e al lui P2');
+    ok(d.p2.magnet===9&&d.player.magnet===0, 'magnetul e al lui P2');
+    ok(d.p2.lives===4&&d.player.lives===3, 'viața extra e a lui P2: '+d.p2.lives+' / '+d.player.lives);
+    ok(d.p2.missiles===5&&d.player.missiles===3, 'rachetele sunt ale lui P2: '+d.p2.missiles+' / '+d.player.missiles);
+    ok(d.p2.wingmen===1&&d.player.wingmen===0, 'colegul e al lui P2');
+  }
+  // --- monede: punga navei + totalul comun ---
+  {
+    caz();
+    d.collect({x:0,y:0,type:'coin',tier:0}, d.player);
+    d.collect({x:0,y:0,type:'coin',tier:2}, d.p2);
+    ok(d.player.coins===1&&d.p2.coins===5, 'fiecare navă își strânge monedele: '+d.player.coins+' / '+d.p2.coins);
+    ok(d.runStats.coins===6, 'totalul rundei le însumează: '+d.runStats.coins);
+    ok(d.player.score>0&&d.p2.score>0&&d.player.score!==d.p2.score, 'scorurile cresc separat: '+d.player.score+' / '+d.p2.score);
+    ok(d.score===d.player.score+d.p2.score, 'scorul comun e suma celor două: '+d.score);
+  }
+  // --- un singur jucator: collect(p) fara nava merge la player ---
+  {
+    caz();
+    d.collect({x:0,y:0,type:'shield'});
+    ok(d.player.shield===9&&d.p2.shield===0, 'apelul vechi collect(p) merge tot la jucător');
+    ok(ultimulToast().length>0 && ultimulToast().indexOf('P2')<0, 'și nu pune eticheta P2 pe anunț');
+  }
+  console.log('\n=== '+pass+' treceri, '+fail+' eșecuri ===');
+  process.exit(fail?1:0);
+})().catch(e=>{ console.error('harness:',e); process.exit(1); });

@@ -1,2 +1,17 @@
 node_modules/
 *.log
+dist/
+dev-dist/
+
+# Android (Capacitor) — codul nativ generat se pastreaza, dar nu si build-urile,
+# nici copia sincronizata a web-ului (o regenereaza `npx cap sync android`),
+# si niciodata cheia de semnare
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/keystore.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+*.keystore
+*.jks
