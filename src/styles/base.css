@@ -52,6 +52,8 @@
   .tbtn:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.3);}
   .perkcard{width:142px;min-height:152px;border:2px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(160deg,#3a2a5e,#241640);box-shadow:0 6px 0 rgba(0,0,0,.35);color:#fff;padding:16px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;font-family:inherit;}
   .perkcard:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.35);}
+  /* landscape pe telefon: ~420px inaltime, cardurile trebuie sa incapa pe doua randuri */
+  @media (max-height:520px){ .perkcard{min-height:0;padding:10px 12px;} }
   #btnMissile{background:linear-gradient(160deg,#bfeaff,var(--blue));}
   #btnBurst{background:linear-gradient(160deg,#ffd98a,#ff8a3b);}
   .tcount{position:absolute;top:-3px;right:-3px;background:var(--ink);color:#fff;font-size:11px;border-radius:999px;padding:1px 6px;font-family:'Baloo 2';}

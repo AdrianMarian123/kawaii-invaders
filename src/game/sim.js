@@ -7,7 +7,7 @@ import { keys, pointer } from './ui-screens.js';
 
 import { myScore, updateHUD } from './hud.js';
 
-import { boltSpr, candySpr, draw, drawCritter, hexA, lightenHex, rr, shade, shatterBubble, shipSkinCanvas, ufoBreak } from '../render/draw.js';
+import { boltSpr, candySpr, draw, drawCritter, drawP2, hexA, lightenHex, rr, shade, shatterBubble, shipSkinCanvas, ufoBreak } from '../render/draw.js';
 
 import { getRelay, normRelay, refreshRelayUI, relayHint, relayIsSet, saveRelayFromField, setRelay, showCoopIntro, showRelayBox } from '../net/relay-config.js';
 
@@ -19,7 +19,7 @@ import { addCoins, addGems, applyTheme, checkDailyLogin, closeShop, coins, critC
 
 import { audioInit, musApply, musNextTrack, musTogglePlay, snd, toggleMute, tone } from './audio.js';
 
-import { GS, H, SPRITES, W, applyAspect, bgImg, ctx, cv, gctx, gcv, setCtx, sprite, updateGfxUI } from './canvas.js';
+import { GS, H, SPRITES, W, applyAspect, bgImg, ctx, cv, gctx, gcv, setCtx, updateGfxUI } from './canvas.js';
 
 import { TAU, clamp, dist2, el, hooks, lerp, rand, randi, ui } from './utils.js';
 
@@ -825,7 +825,7 @@ function updateLaser(ship,dt){
   if(wl>=6)xs=[ship.x-sp*1.4,ship.x,ship.x+sp*1.4];
   if(wl>=8)xs=[ship.x-sp*2,ship.x-sp*0.7,ship.x+sp*0.7,ship.x+sp*2];
   for(let i=0;i<(ship.wingmen||0);i++)xs.push(ship.x+(i===0?-44:44));
-  for(const bx of xs){ beams.push({x:bx,dps,w:bw});
+  for(const bx of xs){ beams.push({x:bx,y:ship.y-ship.r,dps,w:bw});
     for(const e of enemies){ if(!e.dead&&Math.abs(e.x-bx)<e.r+bw*0.6&&e.y<ship.y) damageEnemy(e,dps*dt,e.x,e.y-e.r,'laser',ship); } }
   if(Math.random()<0.4)snd.zap();
 }
@@ -1169,9 +1169,15 @@ function netSnapshot(){
   const pb=bullets.slice(0,40).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
   const pk=pickups.slice(0,24).map(p=>({i:NID(p),x:P((p.x||0)/iw),y:P((p.y||0)/ih),ty:p.type||'coin',
     tr:p.tier||0, w:p.weapon||0}));
+  // fasciculele de laser sunt efemere (se refac in fiecare cadru): fara ele in
+  // instantaneu, oaspetele nu vedea NICIUN glonț cat timp cineva tragea cu laser.
+  const bm=beams.slice(0,8).map(b=>({x:P((b.x||0)/iw),y:P((b.y||0)/ih),w:P((b.w||12)/ih)}));
   const snap={t:'s',sc:score|0,wv:wave|0,lv:player.lives|0,cm:mult||1,
-    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,
+    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,
     hw:iw, hh:ih, wm:player.wingmen|0,
+    // frenezia e a echipei intregi (bonus de viteza pentru amandoi): fara ea in
+    // instantaneu, oaspetele nu vedea niciodata aura, bara sau anuntul "FRENEZIE!"
+    fz:+frenzy.toFixed(3), fzt:+frenzyT.toFixed(2),
     fl:(flash>0&&flashCol)?flashCol:0};
   // Starea fiecărei nave, ca oaspetele să-și vadă viețile LUI, nu pe ale gazdei.
   // `h` = nava gazdei, `g` = nava oaspetelui — rolurile sunt fixe, nu mai trebuie alt indicator.
@@ -1239,10 +1245,18 @@ function applySnapshot(m){
   pickups=mergeNet(pickups, m.pk||[], p=>({x:MX(p.x),y:MY(p.y),type:p.ty,r:15,t:0,
     tier:p.tr||0,
     weapon:(p.w && WEAPONS && WEAPONS[p.w]) ? p.w : Object.keys(WEAPONS||{pulse:1})[0]}));
+  // fasciculele nu se interpoleaza — se refac in fiecare cadru la gazda, deci
+  // le refacem direct din instantaneul curent, nu prin mergeNet
+  beams.length=0; (m.bm||[]).forEach(b=>beams.push({x:MX(b.x),y:MY(b.y),w:MR(b.w)||12}));
   netSnapT = 0;                               // porneste cronometrul pana la urmatorul instantaneu
   p2.px=p2.x; p2.py=p2.y; p2.tx=MX(m.p1x); p2.ty=MY(m.p1y);
   if(!p2.active){ p2.x=p2.px=p2.tx; p2.y=p2.py=p2.ty; }   // prima data apare direct, nu aluneca din colt
   p2.active=true;
+  // frenezia e a echipei: fara sincronizarea asta oaspetele nu vedea niciodata
+  // aura, bara sau anuntul de FRENEZIE, desi bonusul de viteza tot se aplica pe gazda
+  const wasFrenzy=frenzyT>0;
+  frenzy=m.fz||0; frenzyT=m.fzt||0;
+  if(frenzyT>0&&!wasFrenzy){ flash=0.4; flashCol='#ffd1ec'; shake(11,.32); toast('FRENEZIE! 🌟','#ff8fc7'); }
   if(m.fl){flash=0.3;flashCol=m.fl;}
   if(m.bt!==undefined){ bossIntro=INTRO_DUR-m.bt; introBoss={type:m.bty,name:m.bnm,col:m.bco,acc:m.bac||null,leafBoss:!!m.blf,style:m.bst||0,slammed:true}; } else bossIntro=0;
   updateHUD();
@@ -1273,6 +1287,10 @@ function guestUpdate(dt){
       nx:+(((player.x - coopView.ox) / _pw)).toFixed(3),
       ny:+(((player.y - coopView.oy) / _ph)).toFixed(3)}); }
   for(const p of particles){ if(p.grav)p.vy+=p.grav*dt; if(p.vr)p.spin=(p.spin||0)+p.vr*dt; p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;} particles=particles.filter(p=>p.life>0); if(particles.length>200)particles.splice(0,particles.length-200);
+  // update(dt) al gazdei stinge flash/shake — oaspetele nu-l ruleaza niciodata,
+  // deci fara asta orice tremur sau fulger (moarte, frenezie) ramanea blocat pe ecran
+  if(flash>0)flash=Math.max(0,flash-dt*1.6);
+  if(shakeT>0)shakeT=Math.max(0,shakeT-dt);
 }
 // Lovitura merge la nava atinsă: vieți, scut și moarte proprii. Cealaltă navă joacă mai departe.
 function hitTeam(ship){ if(ship.invuln>0||ship.dead)return;
@@ -1280,14 +1298,6 @@ function hitTeam(ship){ if(ship.invuln>0||ship.dead)return;
   ship.lives--; ship.hitThisWave=true; if(ship===player)runStats.hitThisWave=true; snd.hurt(); boom(ship.x,ship.y,30,'#7ef9d2'); shake(18,.5); combo=0;mult=1; updateHUD();
   if(ship.lives<=0){ ship.dead=true; ship.deadT=1.1; if(ship===p2)toast('P2 a fost doborât 💔','#ff8fc7'); }
   else { ship.invuln=2.4; ship.x=W/2; ship.y=H-130; } }
-function drawP2(){ const im=sprite('ship'); if(!im||p2.dead&&p2.deadT<=0.6)return;
-  const R=p2.r||19;
-  ctx.save(); ctx.translate(p2.x,p2.y); if(p2.invuln>0&&Math.floor(performance.now()/80)%2)ctx.globalAlpha=0.4;
-  ctx.strokeStyle='rgba(126,249,210,.7)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,R+8,0,TAU); ctx.stroke();
-  const fl=10+Math.random()*8; ctx.fillStyle='rgba(143,211,255,.8)'; ctx.beginPath(); ctx.moveTo(-6,R); ctx.lineTo(6,R); ctx.lineTo(0,R+fl); ctx.fill();
-  const d=R*2.6; ctx.drawImage(im,-d/2,-d/2,d,d); ctx.globalAlpha=1;
-  ctx.fillStyle='#7ef9d2'; ctx.font='800 11px "Baloo 2"'; ctx.textAlign='center'; ctx.fillText('P2',0,-R-12); ctx.restore(); }
-
 function update(dt){
   if(net.mode==='guest'){ guestUpdate(dt); return; }
   bgScroll+=dt*(1+warpT*7); formT+=dt; chainT+=dt;
@@ -1602,10 +1612,10 @@ window.__dbg = { hitTeam, collect, activeShips, fireAllShips, fireFrom, fireMiss
   get coins(){return coins}, get W(){return W}, get H(){return H}, get bossIntro(){return bossIntro},
   get enemies(){return enemies}, get bullets(){return bullets}, get eBullets(){return eBullets},
   get pickups(){return pickups}, get beams(){return beams}, get runStats(){return runStats},
-  get WEAPONS(){return WEAPONS},
+  get WEAPONS(){return WEAPONS}, get frenzy(){return frenzy}, get frenzyT(){return frenzyT},
   set: { score:v=>score=v, combo:v=>combo=v, mult:v=>mult=v, state:v=>state=v, wave:v=>wave=v,
          bossIntro:v=>bossIntro=v, frenzyT:v=>frenzyT=v, coins:v=>addCoins(v-coins),
          enemies:a=>enemies=a, bullets:a=>bullets=a, eBullets:a=>eBullets=a,
          pickups:a=>pickups=a, beams:a=>beams=a } };
 
-export { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, daily, drawP2, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };
+export { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, daily, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };
