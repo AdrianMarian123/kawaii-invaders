@@ -1633,7 +1633,7 @@ window.__dbg = { hitTeam, collect, activeShips, fireAllShips, fireFrom, fireMiss
   get runStats(){return runStats},
   get WEAPONS(){return WEAPONS}, get frenzy(){return frenzy}, get frenzyT(){return frenzyT},
   set: { score:v=>score=v, combo:v=>combo=v, mult:v=>mult=v, state:v=>state=v, wave:v=>wave=v,
-         bossIntro:v=>bossIntro=v, frenzyT:v=>frenzyT=v, coins:v=>addCoins(v-coins),
+         bossIntro:v=>bossIntro=v, frenzy:v=>frenzy=v, frenzyT:v=>frenzyT=v, coins:v=>addCoins(v-coins),
          enemies:a=>enemies=a, bullets:a=>bullets=a, eBullets:a=>eBullets=a,
          pickups:a=>pickups=a, beams:a=>beams=a, zaps:a=>zaps=a } };
 
