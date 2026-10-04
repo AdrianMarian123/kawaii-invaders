@@ -1,0 +1,35 @@
+# Ruleaza testele automate din dezvoltare/ la fiecare pull request.
+# Numele jobului ("tests") e verificarea ceruta inainte de unirea in main.
+name: Teste
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: dezvoltare
+    steps:
+      - name: Ia fisierele din repo
+        uses: actions/checkout@v4
+
+      - name: Instaleaza Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instaleaza ws si jsdom
+        run: npm install --no-audit --no-fund
+
+      - name: Ruleaza toate testele
+        run: npm test
