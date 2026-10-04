@@ -32,7 +32,7 @@ function box(label){
     player:{x:360,y:1150,lives:3,dead:false,deadT:0,r:16,shield:0,invuln:0,weapon:'b',lvl:{},score:0,coins:0},
     ui:{menu:mk(),story:mk(),coop:mk(),opts:mk(),pause:mk(),over:mk(),touchpad:mk(),finalScore:mk()},
     state:'menu',score:0,wave:1,mult:1,combo:0,waveActive:false,bossIntro:0,introBoss:null,
-    enemies:[],eBullets:[],bullets:[],pickups:[],particles:[],flash:0,flashCol:0,gravityMode:false,
+    enemies:[],eBullets:[],bullets:[],pickups:[],particles:[],flash:0,flashCol:0,frenzy:0,frenzyT:0,gravityMode:false,
     pointer:{active:false,x:0,y:0},keys:{},runStats:{maxWave:1,kills:0,maxMult:1,coins:0,missiles:0,bossKills:0},
     WEAPONS:{pulse:{icon:'x'},scatter:{icon:'x'},laser:{icon:'x'},arc:{icon:'x'},boomer:{icon:'x'}},
     clamp:(v,a,b)=>Math.max(a,Math.min(b,v)), lerp:(x,y,t)=>x+(y-x)*t, sprite:()=>null, ctx:null, TAU:Math.PI*2,

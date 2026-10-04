@@ -63,7 +63,7 @@ function makeSandbox(label, store) {
     ui: { menu: mkEl(), story: mkEl(), coop: mkEl(), opts: mkEl(), pause: mkEl(), over: mkEl(), touchpad: mkEl(), finalScore: mkEl() },
     state: 'menu', score: 0, wave: 1, mult: 1, combo: 0, waveActive: false, bossIntro: 0, introBoss: null,
     enemies: [], eBullets: [], bullets: [], pickups: [], particles: [],
-    flash: 0, flashCol: 0, gravityMode: false, pointer: { active: false, x: 0, y: 0 }, keys: {},
+    flash: 0, flashCol: 0, frenzy: 0, frenzyT: 0, gravityMode: false, pointer: { active: false, x: 0, y: 0 }, keys: {},
     runStats: { maxWave: 1, kills: 0, maxMult: 1, coins: 0, missiles: 0, bossKills: 0 },
     // cheile reale din joc — drawPickup face WEAPONS[p.weapon].icon, deci cheia trebuie sa existe
     WEAPONS: { pulse:{icon:'✦'}, scatter:{icon:'❀'}, laser:{icon:'≡'}, arc:{icon:'⚡'}, boomer:{icon:'🪃'} },
@@ -339,6 +339,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     h.player.wingmen = 2;
     h.netSnapshot(); g.applySnapshot(snap);
     ok(g.player.wingmen === 2, 'catelusii gazdei ajung si la oaspete: ' + g.player.wingmen);
+
+    // frenezia e a echipei: oaspetele trebuie sa vada bara si aura
+    h.frenzy = 0.6; h.frenzyT = 0;
+    h.netSnapshot(); g.applySnapshot(snap);
+    ok(Math.abs(g.frenzy - 0.6) < 0.01 && g.frenzyT === 0, 'bara de frenezie ajunge la oaspete: ' + g.frenzy);
+    h.frenzy = 1; h.frenzyT = 4.5;
+    h.netSnapshot(); g.applySnapshot(snap);
+    ok(Math.abs(g.frenzyT - 4.5) < 0.01, 'frenezia activa ajunge la oaspete: ' + g.frenzyT);
 
     // monedele: gazda strange, oaspetele le primeste in punga la final
     g.coins = 0; g.saveCoins = () => { g.__saved = g.coins; };
