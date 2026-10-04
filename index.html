@@ -218,34 +218,44 @@
   </div>
 
   <div class="screen hide" id="over"><div class="veil"></div>
-    <div class="pcard">
+    <div class="pcard overCard">
       <div class="pbubbles" aria-hidden="true"><i>🌸</i><i>⭐</i><i>🍬</i><i>💖</i><i>✨</i><i>🌟</i></div>
-      <div class="ptitle baloo" id="overTitle">GAME OVER</div>
-      <div class="scorebig baloo"><em>scor final</em><b id="finalScore">0</b></div>
-      <div class="chips wrap">
-        <div class="chip c2"><span>🌊</span><em>val maxim</em><b id="oWave">1</b></div>
-        <div class="chip c1"><span>💥</span><em>doborâți</em><b id="oKills">0</b></div>
-        <div class="chip c4"><span>⚡</span><em>combo max</em><b id="oCombo">x1</b></div>
-        <div class="chip c3"><span>🪙</span><em>monede</em><b id="oCoins">0</b></div>
-        <div class="chip c5"><span>🚀</span><em>rachete</em><b id="oMissiles">0</b></div>
-        <div class="chip c6"><span>👑</span><em>boși</em><b id="oBoss">0</b></div>
+      <!-- esențialul, mereu la vedere: scorul și butoanele de ieșire -->
+      <div class="overMain">
+        <div class="ptitle baloo" id="overTitle">GAME OVER</div>
+        <div class="scorebig baloo"><em>scor final</em><b id="finalScore">0</b></div>
+        <div class="overDuo" id="overDuo" style="display:none"><span>💗 <b id="oDuoMe">0</b></span><span>💙 <b id="oDuoHim">0</b></span></div>
+        <div class="scoreline" id="bestLine" style="font-size:13px;opacity:.85"></div>
+        <button class="btn" id="againBtn">🔁 ÎNCĂ O DATĂ</button>
+        <button class="btn ghost" id="menuBtn">🏠 meniu</button>
+        <div class="overSmall">
+          <button class="btn ghost mini" id="detailsBtn" aria-expanded="false">📊 detalii</button>
+          <button class="btn ghost mini" id="shareBtn">📤 partajează</button>
+        </div>
       </div>
-      <div class="chips wrap" id="coopSplit" style="display:none">
-        <div class="chip c1"><span>💗</span><em>scorul tău</em><b id="oScoreMe">0</b></div>
-        <div class="chip c2"><span>💙</span><em>al prietenului</em><b id="oScoreHim">0</b></div>
-        <div class="chip c3"><span>💗🪙</span><em>monedele tale</em><b id="oCoinsMe">0</b></div>
-        <div class="chip c4"><span>💙🪙</span><em>ale prietenului</em><b id="oCoinsHim">0</b></div>
+      <!-- statisticile: doar la cerere, ca să nu împingă butoanele afară din ecran -->
+      <div class="overDetails" id="overDetails" hidden>
+        <div class="chips wrap">
+          <div class="chip c2"><span>🌊</span><em>val maxim</em><b id="oWave">1</b></div>
+          <div class="chip c1"><span>💥</span><em>doborâți</em><b id="oKills">0</b></div>
+          <div class="chip c4"><span>⚡</span><em>combo max</em><b id="oCombo">x1</b></div>
+          <div class="chip c3"><span>🪙</span><em>monede</em><b id="oCoins">0</b></div>
+          <div class="chip c5"><span>🚀</span><em>rachete</em><b id="oMissiles">0</b></div>
+          <div class="chip c6"><span>👑</span><em>boși</em><b id="oBoss">0</b></div>
+        </div>
+        <div class="chips wrap" id="coopSplit" style="display:none">
+          <div class="chip c1"><span>💗</span><em>scorul tău</em><b id="oScoreMe">0</b></div>
+          <div class="chip c2"><span>💙</span><em>al prietenului</em><b id="oScoreHim">0</b></div>
+          <div class="chip c3"><span>💗🪙</span><em>monedele tale</em><b id="oCoinsMe">0</b></div>
+          <div class="chip c4"><span>💙🪙</span><em>ale prietenului</em><b id="oCoinsHim">0</b></div>
+        </div>
       </div>
-      <div class="scoreline" id="bestLine" style="font-size:13px;opacity:.85"></div>
-      <button class="btn" id="againBtn">🔁 ÎNCĂ O DATĂ</button>
-      <button class="btn ghost" id="shareBtn">📤 partajează scorul</button>
-      <button class="btn ghost" id="menuBtn">🏠 meniu</button>
     </div>
   </div>
 
   <div id="banner"><div class="inner baloo" id="bannerTxt"></div></div>
   <div id="toast" class="baloo"></div>
-  <div class="verTag">ki-v70</div>
+  <div class="verTag">ki-v71</div>
 </div>
 
 <script src="assets/sprites-data.js"></script>

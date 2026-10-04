@@ -21,7 +21,7 @@ import { audioInit, musApply, musNextTrack, musTogglePlay, snd, toggleMute, tone
 
 import { GS, H, SPRITES, W, applyAspect, bgImg, ctx, cv, gctx, gcv, setCtx, updateGfxUI } from './canvas.js';
 
-import { TAU, clamp, dist2, el, hooks, lerp, rand, randi, ui } from './utils.js';
+import { TAU, clamp, dist2, el, hooks, lerp, rand, randi, setOverDetails, ui } from './utils.js';
 
 import { BEAST, BOSS_NAME, CRITCOL, CRITTERS, EVENT_NAME, LCOLS, SECTORS, STORY, WEAK, WEAPONS, XCOLS } from './config.js';
 
@@ -142,6 +142,7 @@ function startGame(){
 function toMenu(){ coopReset(); el('overTitle').textContent='GAME OVER'; state='menu'; ['story','over','pause','coop','opts','shop','dailyReward','help'].forEach(s=>{const e=el(s);if(e)e.classList.add('hide');});
   ui.menu.classList.remove('hide'); ui.touchpad.style.display='none'; if(el('coopCode'))el('coopCode').style.display='none'; renderDaily(); updateCoinUI(); }
 function gameOver(){ state='over';
+  try{ setOverDetails(false); }catch(e){}
   ui.over.classList.remove('hide'); ui.touchpad.style.display='none';   // afișează imediat — fără freeze chiar dacă statisticile aruncă
   try{
   if(net.mode==='host')netSend({t:'over',sc:score,sc1:p2.score|0,sc2:player.score|0,co:p2.coins|0,co2:player.coins|0});
@@ -1075,7 +1076,8 @@ function startRoom(code,asHost){
 
 // Serverul e pe un plan gratuit și adoarme; un GET simplu îl trezește mai repede
 // decât o cerere de WebSocket care expiră.
-function coopWake(url){ try{ fetch(String(url).replace(/^ws/,'http'),{mode:'no-cors',cache:'no-store'}); }catch(e){} }
+// doar o trezire: daca cererea esueaza (fara internet, server cazut) nu conteaza — nu aratam nicio eroare
+function coopWake(url){ try{ fetch(String(url).replace(/^ws/,'http'),{mode:'no-cors',cache:'no-store'}).catch(()=>{}); }catch(e){} }
 
 function coopOpen(){
   if(net.stopped||!net.room)return;
@@ -1129,9 +1131,12 @@ try{ document.addEventListener('visibilitychange', ()=>{
 function showCoopSplit(sMine,sHis,cMine,cHis){ const cs=el('coopSplit'); if(!cs)return;
   const on=(net.mode!=='off'&&p2.active);
   cs.style.display=on?'flex':'none';
+  // randul scurt 💗/💙 sta langa scorul final, deasupra butoanelor: se vede fara „📊 detalii"
+  const duo=el('overDuo'); if(duo)duo.style.display=on?'flex':'none';
   if(!on)return;
   const put=(id,v)=>{ const n=el(id); if(n)n.textContent=(v|0).toLocaleString(); };
-  put('oScoreMe',sMine); put('oScoreHim',sHis); put('oCoinsMe',cMine); put('oCoinsHim',cHis); }
+  put('oScoreMe',sMine); put('oScoreHim',sHis); put('oDuoMe',sMine); put('oDuoHim',sHis);
+  put('oCoinsMe',cMine); put('oCoinsHim',cHis); }
 function netHost(){ startRoom(shortId(),true); }
 function netJoin(code){ startRoom(code,false); }
 function netSend(o){ if(net.ws&&net.ws.readyState===1){ if(net.ws.bufferedAmount>180000)return;
@@ -1145,6 +1150,7 @@ function onNetData(m){ if(!m)return;
     else if(m.t==='over'){ score=m.sc; state='over';
       if(m.sc1!==undefined)player.score=m.sc1|0; if(m.sc2!==undefined)p2.score=m.sc2|0;
       if(m.co){ runStats.coins=(m.co|0)+(m.co2|0); addCoins(m.co|0); } ['menu','story','coop','opts','pause'].forEach(s=>ui[s].classList.add('hide'));
+      try{ setOverDetails(false); }catch(e){}
       ui.over.classList.remove('hide'); ui.finalScore.textContent=score.toLocaleString(); el('overTitle').textContent='CO-OP TERMINAT';
       el('oWave').textContent=Math.max(runStats.maxWave,wave); el('oKills').textContent=runStats.kills;
       el('oCombo').textContent='x'+(runStats.maxMult||1); el('oCoins').textContent=runStats.coins;
@@ -1166,14 +1172,22 @@ function netSnapshot(){
       if(e.leaf){ if(e.lcol)o.lc=e.lcol; if(e.face!==undefined)o.fc=e.face|0; } }
     return o; });
   const eb=eBullets.slice(0,90).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||7)/ih),c:b.color||'#ffd1f0',k:b.bk||'drop'}));
-  const pb=bullets.slice(0,40).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
+  // Gloantele: pana la 40 pentru FIECARE nava. Inainte plecau doar primele 40 (cele mai vechi, cele
+  // mai de sus), iar oaspetele nu vedea nimic iesind din nave cat timp gazda tragea mult. Alegerea
+  // dupa id e stabila: acelasi glont ramane ales de la un instantaneu la altul, deci nu palpaie.
+  const pickB=(list)=>{ const k=Math.ceil(list.length/40)||1; return list.filter(b=>NID(b)%k===0).slice(0,40); };
+  const pb=[...pickB(bullets.filter(b=>b.own!==p2)),...pickB(bullets.filter(b=>b.own===p2))]
+    .map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
   const pk=pickups.slice(0,24).map(p=>({i:NID(p),x:P((p.x||0)/iw),y:P((p.y||0)/ih),ty:p.type||'coin',
     tr:p.tier||0, w:p.weapon||0}));
   // fasciculele de laser sunt efemere (se refac in fiecare cadru): fara ele in
   // instantaneu, oaspetele nu vedea NICIUN glonț cat timp cineva tragea cu laser.
-  const bm=beams.slice(0,8).map(b=>({x:P((b.x||0)/iw),y:P((b.y||0)/ih),w:P((b.w||12)/ih)}));
+  const bm=beams.slice(0,12).map(b=>({x:P((b.x||0)/iw),y:P((b.y||0)/ih),w:P((b.w||12)/ih)}));
+  // fulgerele (arc, storm) nu sunt nici gloante, nici raze: fara ele oaspetele nu-si
+  // vedea arma cu electricitate. Forma compacta [x1,y1,x2,y2,cat a mai ramas] — sunt multe.
+  const zp=zaps.slice(0,24).map(z=>[P(z.x1/iw),P(z.y1/ih),P(z.x2/iw),P(z.y2/ih),+(z.life/(z.max||1)).toFixed(2)]);
   const snap={t:'s',sc:score|0,wv:wave|0,lv:player.lives|0,cm:mult||1,
-    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,
+    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,zp:zp,
     hw:iw, hh:ih, wm:player.wingmen|0,
     // frenezia e a echipei intregi (bonus de viteza pentru amandoi): fara ea in
     // instantaneu, oaspetele nu vedea niciodata aura, bara sau anuntul "FRENEZIE!"
@@ -1248,6 +1262,7 @@ function applySnapshot(m){
   // fasciculele nu se interpoleaza — se refac in fiecare cadru la gazda, deci
   // le refacem direct din instantaneul curent, nu prin mergeNet
   beams.length=0; (m.bm||[]).forEach(b=>beams.push({x:MX(b.x),y:MY(b.y),w:MR(b.w)||12}));
+  zaps.length=0; (m.zp||[]).forEach(z=>zaps.push({x1:MX(z[0]),y1:MY(z[1]),x2:MX(z[2]),y2:MY(z[3]),life:z[4]||0.1,max:1}));
   netSnapT = 0;                               // porneste cronometrul pana la urmatorul instantaneu
   p2.px=p2.x; p2.py=p2.y; p2.tx=MX(m.p1x); p2.ty=MY(m.p1y);
   if(!p2.active){ p2.x=p2.px=p2.tx; p2.y=p2.py=p2.ty; }   // prima data apare direct, nu aluneca din colt
@@ -1466,7 +1481,10 @@ function update(dt){
       particles.push(part(b.x,b.y,a,rand(40,90),'#bfe9ff',rand(.15,.3),rand(1.5,2.6)));
       if(runStats.graze%25===0){ toast('RAZANT ×'+runStats.graze+' ⚡','#bfe9ff'); if(snd.pickup)snd.pickup(); } } }
   if(net.mode==='host'&&p2.active&&p2.invuln<=0&&!p2.dead){ for(const b of eBullets){ const rr=p2.r-3+(b.r||7);
-    if(dist2(b.x,b.y,p2.x,p2.y)<rr*rr){b.gone=true;hitTeam(p2);break;} } }
+    const gd=dist2(b.x,b.y,p2.x,p2.y);
+    if(gd<rr*rr){b.gone=true;hitTeam(p2);break;}
+    // frenezia e a echipei, deci si razantul prietenului o incarca
+    else if(!b._grz2 && gd<(rr+16)*(rr+16)){ b._grz2=true; addFrenzy(0.012); } } }
   eBullets=eBullets.filter(b=>!b.gone);
 
   // obiectele de pe jos — trase spre o navă doar cât ține magnetul; culese de nava care le atinge
@@ -1611,11 +1629,12 @@ window.__dbg = { hitTeam, collect, activeShips, fireAllShips, fireFrom, fireMiss
   get score(){return score}, get wave(){return wave}, get combo(){return combo}, get mult(){return mult},
   get coins(){return coins}, get W(){return W}, get H(){return H}, get bossIntro(){return bossIntro},
   get enemies(){return enemies}, get bullets(){return bullets}, get eBullets(){return eBullets},
-  get pickups(){return pickups}, get beams(){return beams}, get runStats(){return runStats},
+  get pickups(){return pickups}, get beams(){return beams}, get zaps(){return zaps},
+  get runStats(){return runStats},
   get WEAPONS(){return WEAPONS}, get frenzy(){return frenzy}, get frenzyT(){return frenzyT},
   set: { score:v=>score=v, combo:v=>combo=v, mult:v=>mult=v, state:v=>state=v, wave:v=>wave=v,
          bossIntro:v=>bossIntro=v, frenzyT:v=>frenzyT=v, coins:v=>addCoins(v-coins),
          enemies:a=>enemies=a, bullets:a=>bullets=a, eBullets:a=>eBullets=a,
-         pickups:a=>pickups=a, beams:a=>beams=a } };
+         pickups:a=>pickups=a, beams:a=>beams=a, zaps:a=>zaps=a } };
 
 export { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, daily, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };

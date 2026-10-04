@@ -3,7 +3,7 @@
 // video-ul de intro. Ruleaza la incarcare si doar leaga handlere.
 import { audioInit, musNextTrack, musTogglePlay, snd, toggleMute } from './audio.js';
 import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.js';
-import { el, ui } from './utils.js';
+import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
 import { setMenuTheme } from './menu-theme.js';
 import { refreshRelayUI, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
@@ -131,6 +131,8 @@ function renderMedals(){ const m=el('medals'); if(!m)return; const got=ACHV.filt
 el('storyGo').onclick=startGame;
 el('storyBack').onclick=()=>{ui.story.classList.add('hide');ui.menu.classList.remove('hide');};
 el('againBtn').onclick=startGame;
+// „📊 detalii” arată/ascunde statisticile de pe ecranul de final
+{ const b=el('detailsBtn'); if(b)b.onclick=()=>setOverDetails(el('overDetails').hidden); }
 el('menuBtn').onclick=toMenu;
 { const b=el('shareBtn'); if(b)b.onclick=()=>{
     const w=Math.max(runStats.maxWave,wave);
