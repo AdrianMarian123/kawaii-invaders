@@ -2020,7 +2020,7 @@ function updateLaser(ship,dt){
   if(wl>=6)xs=[ship.x-sp*1.4,ship.x,ship.x+sp*1.4];
   if(wl>=8)xs=[ship.x-sp*2,ship.x-sp*0.7,ship.x+sp*0.7,ship.x+sp*2];
   for(let i=0;i<(ship.wingmen||0);i++)xs.push(ship.x+(i===0?-44:44));
-  for(const bx of xs){ beams.push({x:bx,dps,w:bw});
+  for(const bx of xs){ beams.push({x:bx,dps,w:bw,y:ship.y,r:ship.r});
     for(const e of enemies){ if(!e.dead&&Math.abs(e.x-bx)<e.r+bw*0.6&&e.y<ship.y) damageEnemy(e,dps*dt,e.x,e.y-e.r,'laser',ship); } }
   if(Math.random()<0.4)snd.zap();
 }
@@ -2402,11 +2402,19 @@ function netSnapshot(){
       if(e.leaf){ if(e.lcol)o.lc=e.lcol; if(e.face!==undefined)o.fc=e.face|0; } }
     return o; });
   const eb=eBullets.slice(0,90).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||7)/ih),c:b.color||'#ffd1f0',k:b.bk||'drop'}));
-  const pb=bullets.slice(0,40).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
+  // Gloanțele: până la 40 pentru FIECARE navă, răsfirate pe tot ecranul. Înainte plecau doar primele 40
+  // (cele mai vechi, sus), iar oaspetele nu vedea nimic ieșind din nave. Alegerea după id e stabilă:
+  // același glonț rămâne ales de la un instantaneu la altul, deci nu pâlpâie.
+  const pickB=(list)=>{ const k=Math.ceil(list.length/40)||1; return list.filter(b=>NID(b)%k===0).slice(0,40); };
+  const pb=[...pickB(bullets.filter(b=>b.own!==p2)),...pickB(bullets.filter(b=>b.own===p2))]
+    .map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
+  // laserele (raze) și fulgerele (arc, storm) nu sunt gloanțe — fără ele oaspetele nu-și vedea arma
+  const bm=beams.slice(0,12).map(b=>[P(b.x/iw),P((b.w||12)/ih),P((b.y||player.y)/ih)]);
+  const zp=zaps.slice(0,24).map(z=>[P(z.x1/iw),P(z.y1/ih),P(z.x2/iw),P(z.y2/ih),+(z.life/z.max).toFixed(2)]);
   const pk=pickups.slice(0,24).map(p=>({i:NID(p),x:P((p.x||0)/iw),y:P((p.y||0)/ih),ty:p.type||'coin',
     tr:p.tier||0, w:p.weapon||0}));
   const snap={t:'s',sc:score|0,wv:wave|0,lv:player.lives|0,cm:mult||1,
-    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,
+    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,zp:zp,
     hw:iw, hh:ih, wm:player.wingmen|0,
     fz:+frenzy.toFixed(2), ft:+frenzyT.toFixed(2),
     fl:(flash>0&&flashCol)?flashCol:0};
@@ -2476,6 +2484,8 @@ function applySnapshot(m){
     });
   eBullets=mergeNet(eBullets, m.eb||[], b=>({x:MX(b.x),y:MY(b.y),r:MR(b.r),color:b.c,bk:b.k,t:0,vx:0,vy:240}));
   bullets=mergeNet(bullets, m.pb||[], b=>({x:MX(b.x),y:MY(b.y),r:MR(b.r),color:b.c,type:b.ty,vx:0,vy:-880,spin:0}));
+  beams=(m.bm||[]).map(b=>({x:MX(b[0]),w:MR(b[1]),y:MY(b[2])}));
+  zaps=(m.zp||[]).map(z=>({x1:MX(z[0]),y1:MY(z[1]),x2:MX(z[2]),y2:MY(z[3]),life:z[4]||0.1,max:1}));
   pickups=mergeNet(pickups, m.pk||[], p=>({x:MX(p.x),y:MY(p.y),type:p.ty,r:15,t:0,
     tier:p.tr||0,
     weapon:(p.w && WEAPONS && WEAPONS[p.w]) ? p.w : Object.keys(WEAPONS||{pulse:1})[0]}));
@@ -3137,10 +3147,10 @@ function draw(){
   for(const p of pickups){ ctx.beginPath(); ctx.ellipse(p.x,p.y+13,9,3.5,0,0,TAU); ctx.fill(); }
 
   // beams behind ship
-  for(const bm of beams){ const bw=bm.w||12; const grd=ctx.createLinearGradient(bm.x,0,bm.x,player.y);
+  for(const bm of beams){ const bw=bm.w||12, by=bm.y||player.y, bh=by-(bm.r||player.r); const grd=ctx.createLinearGradient(bm.x,0,bm.x,by);
     grd.addColorStop(0,'rgba(143,211,255,0)'); grd.addColorStop(1,'rgba(143,211,255,.8)');
-    ctx.fillStyle=grd; ctx.fillRect(bm.x-bw/2,0,bw,player.y-player.r);
-    ctx.fillStyle='rgba(255,255,255,.72)'; ctx.fillRect(bm.x-bw*0.17,0,bw*0.34,player.y-player.r); }
+    ctx.fillStyle=grd; ctx.fillRect(bm.x-bw/2,0,bw,bh);
+    ctx.fillStyle='rgba(255,255,255,.72)'; ctx.fillRect(bm.x-bw*0.17,0,bw*0.34,bh); }
   // zaps
   for(const z of zaps){ const a=z.life/z.max; ctx.lineCap='round'; ctx.lineJoin='round';
     const pts=[[z.x1,z.y1]]; for(let i=1;i<=6;i++){const tt=i/6;pts.push([z.x1+(z.x2-z.x1)*tt+rand(-8,8),z.y1+(z.y2-z.y1)*tt+rand(-8,8)]);}
@@ -3782,7 +3792,7 @@ function drawGlow(){
   // enemy bullets (soft danger glow)
   for(const b of eBullets){ gctx.fillStyle=hexA(b.color,.4); glowDot(b.x,b.y,(b.r||7)*1.7); }
   // beams
-  for(const bm of beams){const gw=(bm.w||18)*1.5;gctx.fillStyle='rgba(143,211,255,.8)';gctx.fillRect(bm.x-gw/2,0,gw,player.y);}
+  for(const bm of beams){const gw=(bm.w||18)*1.5;gctx.fillStyle='rgba(143,211,255,.8)';gctx.fillRect(bm.x-gw/2,0,gw,bm.y||player.y);}
   // zaps
   for(const z of zaps){gctx.strokeStyle='rgba(200,155,255,.9)';gctx.lineWidth=10;gctx.beginPath();gctx.moveTo(z.x1,z.y1);gctx.lineTo(z.x2,z.y2);gctx.stroke();}
   // explosion sparks + rings

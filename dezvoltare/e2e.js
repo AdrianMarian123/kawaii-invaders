@@ -62,7 +62,7 @@ function makeSandbox(label, store) {
     player: { x: 360, y: 1150, lives: 3, dead: false, deadT: 0, r: 16, shield: 0, invuln: 0, weapon: 'b', lvl: {} },
     ui: { menu: mkEl(), story: mkEl(), coop: mkEl(), opts: mkEl(), pause: mkEl(), over: mkEl(), touchpad: mkEl(), finalScore: mkEl() },
     state: 'menu', score: 0, wave: 1, mult: 1, combo: 0, waveActive: false, bossIntro: 0, introBoss: null,
-    enemies: [], eBullets: [], bullets: [], pickups: [], particles: [],
+    enemies: [], eBullets: [], bullets: [], pickups: [], particles: [], beams: [], zaps: [],
     flash: 0, flashCol: 0, frenzy: 0, frenzyT: 0, gravityMode: false, pointer: { active: false, x: 0, y: 0 }, keys: {},
     runStats: { maxWave: 1, kills: 0, maxMult: 1, coins: 0, missiles: 0, bossKills: 0 },
     // cheile reale din joc — drawPickup face WEAPONS[p.weapon].icon, deci cheia trebuie sa existe
@@ -347,6 +347,26 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     h.frenzy = 1; h.frenzyT = 4.5;
     h.netSnapshot(); g.applySnapshot(snap);
     ok(Math.abs(g.frenzyT - 4.5) < 0.01, 'frenezia activa ajunge la oaspete: ' + g.frenzyT);
+
+    // fiecare isi vede arma: gloantele AMBELOR nave ajung la oaspete, chiar si cand trag mult
+    h.bullets = [];
+    for (let k = 0; k < 200; k++) h.bullets.push({ x: 100, y: 100 + k, r: 4, own: h.player });
+    for (let k = 0; k < 150; k++) h.bullets.push({ x: 600, y: 100 + k, r: 4, own: h.p2 });
+    h.netSnapshot();
+    const xs = snap.pb.map(b => b.x);
+    const nH = xs.filter(x => x < 0.5).length, nG = xs.filter(x => x >= 0.5).length;
+    ok(nH > 0 && nG > 0, 'gloantele ambelor nave sunt trimise (gazda ' + nH + ', oaspete ' + nG + ')');
+    ok(nH <= 40 && nG <= 40, 'cel mult 40 pe nava');
+    const ysG = h.bullets.filter(b => b.own === h.p2 && snap.pb.some(q => q.i === b.__nid)).map(b => b.y);
+    ok(Math.max(...ysG) - Math.min(...ysG) > 100, 'gloantele alese sunt rasfirate, nu doar cele vechi: ' + Math.min(...ysG) + '..' + Math.max(...ysG));
+    h.bullets = [];
+    // laserul si fulgerele nu sunt gloante — trebuie trimise separat
+    h.beams = [{ x: 600, w: 14, y: 1100, r: 19 }];
+    h.zaps = [{ x1: 600, y1: 1100, x2: 500, y2: 300, life: 0.06, max: 0.12 }];
+    h.netSnapshot(); g.applySnapshot(snap);
+    ok(g.beams.length === 1 && g.beams[0].y > 0, 'raza laser ajunge la oaspete');
+    ok(g.zaps.length === 1 && Math.abs(g.zaps[0].life / g.zaps[0].max - 0.5) < 0.01, 'fulgerul (arc/storm) ajunge la oaspete');
+    h.beams = []; h.zaps = [];
 
     // monedele: gazda strange, oaspetele le primeste in punga la final
     g.coins = 0; g.saveCoins = () => { g.__saved = g.coins; };
