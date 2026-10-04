@@ -2310,7 +2310,8 @@ function startRoom(code,asHost){
 
 // Serverul e pe un plan gratuit și adoarme; un GET simplu îl trezește mai repede
 // decât o cerere de WebSocket care expiră.
-function coopWake(url){ try{ fetch(String(url).replace(/^ws/,'http'),{mode:'no-cors',cache:'no-store'}); }catch(e){} }
+// doar o trezire: dacă cererea eșuează (fără internet, server căzut), nu contează — nu arătăm nicio eroare
+function coopWake(url){ try{ fetch(String(url).replace(/^ws/,'http'),{mode:'no-cors',cache:'no-store'}).catch(()=>{}); }catch(e){} }
 
 function coopOpen(){
   if(net.stopped||!net.room)return;
