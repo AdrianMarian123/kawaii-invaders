@@ -136,6 +136,16 @@ function musApply(){ const t=curTrack(); const src=mp3Src(t);
   const db=el('musDockBtn'); if(db)db.classList.toggle('off',!musicOn); }
 function musNextTrack(dir){ musTrackIx=(musTrackIx+dir+TRACKS.length)%TRACKS.length; musStep=0; if(actx)musNextTime=actx.currentTime+0.05; musSave(); musApply(); }
 function musTogglePlay(){ musicOn=!musicOn; musSave(); musApply(); }
+// Adevărat când muzica chiar sună (sau jucătorul a oprit-o). La pornire play()
+// e refuzat de browser până la primul gest, deci ui-screens.js reîncearcă la
+// fiecare atingere până când asta devine adevărat.
+function musPlaying(){ const t=curTrack(); if(!musicOn)return true;
+  if(t.id in PROC_TRACKS) return !!(actx&&actx.state==='running');
+  return !!(musAudio&&!musAudio.paused); }
+function musTrackName(){ return curTrack().n; }
+// Contextul creat înainte de primul gest rămâne suspendat; îl pornim la gest
+// (dar nu cât timp e o reclamă pe ecran).
+function audioResume(){ if(actx&&actx.state==='suspended'&&!ducked)actx.resume().catch(()=>{}); }
 // Reclamele interstitial au sunetul lor: cat una e pe ecran oprim audio-ul
 // jocului si il reluam dupa, fara sa atingem preferinta de mute a jucatorului.
 // `ducked` taie si handler-ul de visibilitychange de mai jos, care altfel ar
@@ -147,4 +157,4 @@ function audioDuck(on){ ducked=!!on;
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!ducked){ try{ if(actx&&actx.state==='suspended')actx.resume(); musApply(); }catch(e){} } });
 
 
-export { audioDuck, audioInit, musApply, musLevel, musNextTrack, musTogglePlay, snd, toggleMute, tone };
+export { audioDuck, audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musTogglePlay, musTrackName, snd, toggleMute, tone };
