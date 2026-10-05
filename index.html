@@ -207,13 +207,16 @@
     <div class="pcard">
       <div class="pbubbles" aria-hidden="true"><i>🌸</i><i>⭐</i><i>🍬</i><i>💖</i><i>✨</i><i>🌟</i></div>
       <div class="ptitle baloo">⏸ PAUZĂ</div>
+      <!-- butoanele imediat sub titlu, ca „spre meniu” să nu ajungă în josul ecranului -->
+      <div class="pauseBtns">
+        <button class="btn" id="resumeBtn">▶ CONTINUĂ</button>
+        <button class="btn ghost" id="quitBtn">🏠 spre meniu</button>
+      </div>
       <div class="chips">
         <div class="chip c1"><span>🏆</span><em>scor</em><b id="pStatScore">0</b></div>
         <div class="chip c2"><span>🌊</span><em>val</em><b id="pStatWave">1</b></div>
         <div class="chip c3"><span>🪙</span><em>monede</em><b id="pStatCoins">0</b></div>
       </div>
-      <button class="btn" id="resumeBtn">▶ CONTINUĂ</button>
-      <button class="btn ghost" id="quitBtn">🏠 spre meniu</button>
       <div class="keys">apasă <b>P</b> ca să continui</div>
     </div>
   </div>
@@ -256,7 +259,7 @@
 
   <div id="banner"><div class="inner baloo" id="bannerTxt"></div></div>
   <div id="toast" class="baloo"></div>
-  <div class="verTag">ki-v72</div>
+  <div class="verTag">ki-v73</div>
 </div>
 
 <script src="assets/sprites-data.js"></script>

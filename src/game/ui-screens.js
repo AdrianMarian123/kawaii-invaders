@@ -146,7 +146,9 @@ el('quitBtn').onclick=toMenu;
 el('resumeBtn').onclick=togglePause;
 el('pauseBtn').onclick=togglePause;
 el('muteBtn').onclick=toggleMute;
-el('btnMissile').onclick=fireMissile;
-el('btnBurst').onclick=activateBurst;
+// fără argument: onclick ar trimite evenimentul de click în locul navei (ship), iar racheta
+// ar scădea din „rachetele” click-ului, nu ale jucătorului
+el('btnMissile').onclick=()=>fireMissile();
+el('btnBurst').onclick=()=>activateBurst();
 
 export { keys, pointer };

@@ -118,7 +118,9 @@ body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 
 .sbtn.on{background:rgba(255,255,255,.15);color:#ffd24a;cursor:default}
 /* ——— meniu fun & fancy ——— */
 #menu{justify-content:flex-start;gap:0;padding-top:max(10px,env(safe-area-inset-top))}
-.mtopbar{width:min(96vw,560px);display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px auto 4px;z-index:3;flex-wrap:nowrap}
+/* Bara de sus stă între căsuțele HUD-ului care se văd prin meniu: scorul în stânga și viețile în dreapta
+   (#menu are deja 24px pe laturi; +60px = după scor, +100px = înainte de cele 3 vieți). */
+.mtopbar{width:100%;max-width:720px;padding:0 100px 0 60px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px auto 4px;z-index:3;flex-wrap:nowrap}
 .pillrow{display:flex;gap:6px;flex-shrink:1;min-width:0}
 .pillrow .coinPill{padding:5px 10px;font-size:14px;white-space:nowrap}
 .miconrow{display:flex;gap:8px}
@@ -253,3 +255,22 @@ body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 
 @media (orientation:landscape) and (max-height:560px) and (max-width:640px){
   #over{padding-right:76px}
 }
+/* pe vertical (fereastră îngustă de PC) bara coboară sub HUD; în dreapta lasă loc coloanei pauză/sunet/muzică */
+@media (orientation:portrait){ .mtopbar{margin-top:48px;padding:0 40px 0 0} }
+/* telefoane foarte înguste pe orizontală: iconițele mai mici, ca să încapă între „SECTOR” și vieți */
+@media (orientation:landscape) and (max-width:600px){
+  .mtopbar{padding-right:92px}
+  .miconrow{gap:5px}
+  .miconbtn{width:32px;height:32px;font-size:15px;border-radius:10px}
+}
+/* ——— pauza: pe orizontală, cu ecran scund, butoanele stau unul lângă altul, ca „spre meniu” să nu ajungă jos ——— */
+.pauseBtns{display:flex;flex-direction:column;align-items:center;gap:12px}
+@media (max-height:560px){ .pauseBtns{gap:6px} }
+@media (orientation:landscape) and (max-height:560px){
+  .pauseBtns{flex-direction:row;gap:10px}
+  /* ca la ecranul de final: cardul stă la stânga panoului muzical, care e mereu deasupra */
+  #pause{padding-right:228px}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:640px){ #pause{padding-right:76px} }
+/* pe telefon nu există tasta P */
+@media (pointer:coarse){ #pause .keys{display:none} }

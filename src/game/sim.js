@@ -134,7 +134,7 @@ function startGame(){
   { const pb=el('perkBox'); if(pb)pb.style.display='none'; }
   ui.touchpad.style.display='flex';
   state='playing'; nextWave(); updateHUD();
-  if(!daily&&!hardcore){ setTimeout(()=>toast('👆 Ține apăsat oriunde ca să miști nava','#8fd3ff'),700); setTimeout(()=>toast('✨ Tragi automat — distruge inamicii!','#ffe46b'),3300); setTimeout(()=>toast('🚀🔥 Butoanele din dreapta = arme speciale','#ff8fc7'),5900); setTimeout(()=>toast('⭐ Adună stele și bomboane','#7ef9d2'),8500); }
+  if(!daily&&!hardcore){ setTimeout(()=>toast('👆 Ține apăsat oriunde ca să miști nava','#8fd3ff'),700); setTimeout(()=>toast('✨ Tragi automat — distruge inamicii!','#ffe46b'),3300); setTimeout(()=>toast('🚀🔥 Butoanele din stânga = arme speciale','#ff8fc7'),5900); setTimeout(()=>toast('⭐ Adună stele și bomboane','#7ef9d2'),8500); }
   if(hardcore)setTimeout(()=>toast('💀 HARDCORE · scor ×3','#ff5a6a'),400);
   if(daily){ setTimeout(()=>toast('📅 PROVOCAREA ZILEI · '+selectedShip.n,'#8fd3ff'),400);
     if(dailyMod&&dailyMod.id!=='none')setTimeout(()=>toast('🎲 '+dailyMod.n+' — '+dailyMod.d,'#ffd24a'),1400); }
