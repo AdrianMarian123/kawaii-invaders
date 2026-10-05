@@ -90,7 +90,7 @@ const PROC_TRACKS={
   kawaii:{step:0.245,type:'triangle',vol:0.05,bvol:0.075,sparkle:true,
     lead:['E5','G5','E5','C5','D5',0,'E5','D5','D5','B4','D5','G4','B4',0,'D5','B4','C5','E5','A4','C5','E5',0,'A5','E5','A4','C5','F4','A4','C5',0,'A4','G4'],
     bass:{0:'C3',4:'C3',8:'G2',12:'G2',16:'A2',20:'A2',24:'F2',28:'F2'}},
-  drift:{step:0.34,type:'sine',vol:0.045,bvol:0.065,sparkle:false,
+  drift:{step:0.34,type:'sine',vol:0.06,bvol:0.085,sparkle:false,
     lead:['A4',0,'C5',0,'E5',0,'C5',0,'F4',0,'A4',0,'C5',0,'A4',0,'E4',0,'G4',0,'C5',0,'G4',0,'G4',0,'B4',0,'D5',0,'B4',0],
     bass:{0:'A2',8:'F2',16:'C3',24:'G2'}}};
 const TRACKS=[{id:'sunny',n:'Sunny Hill Dash 🎧'},{id:'lost',n:'Memories of a Lost Level 🎼'},{id:'kawaii',n:'Sugar Swarm 🍬'},{id:'drift',n:'Cosmic Drift 🌌'}];
@@ -107,7 +107,7 @@ function procStep(P,step,at){ const lf=P.lead[step]; if(lf)mnote(NF[lf],P.step*1
   const bf=P.bass[step]; if(bf){ mnote(NF[bf],P.step*2.4,'sine',P.bvol,at); mnote(NF[bf]*2,P.step*1.2,'triangle',0.02,at); }
   if(P.sparkle&&step%8===2)mnote(NF.C6,P.step*0.5,'triangle',0.018,at); }
 function ensureMusicClock(){ if(musClock||!actx)return;
-  if(!musicGain){ musicGain=actx.createGain(); musicGain.gain.value=0.9; musicGain.connect(master||actx.destination);
+  if(!musicGain){ musicGain=actx.createGain(); musicGain.gain.value=6; musicGain.connect(master||actx.destination);
     const an=ensureAnalyser(); if(an)musicGain.connect(an); }   // ramură paralelă: doar ascultă
   musNextTime=actx.currentTime+0.1;
   musClock=setInterval(()=>{ const t=curTrack();
