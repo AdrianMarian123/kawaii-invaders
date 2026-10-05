@@ -79,7 +79,15 @@ function musApply(){ const t=curTrack(); const src=mp3Src(t.id);
   const db=el('musDockBtn'); if(db)db.classList.toggle('off',!musicOn); }
 function musNextTrack(dir){ musTrackIx=(musTrackIx+dir+TRACKS.length)%TRACKS.length; musStep=0; if(actx)musNextTime=actx.currentTime+0.05; musSave(); musApply(); }
 function musTogglePlay(){ musicOn=!musicOn; musSave(); musApply(); }
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ try{ if(actx&&actx.state==='suspended')actx.resume(); musApply(); }catch(e){} } });
+// Reclamele interstitial au sunetul lor: cat una e pe ecran oprim audio-ul
+// jocului si il reluam dupa, fara sa atingem preferinta de mute a jucatorului.
+// `ducked` taie si handler-ul de visibilitychange de mai jos, care altfel ar
+// reporni muzica in spatele reclamei la prima revenire in prim-plan.
+let ducked=false;
+function audioDuck(on){ ducked=!!on;
+  try{ if(on){ if(musAudio)musAudio.pause(); if(actx&&actx.state==='running')actx.suspend(); }
+       else { if(actx&&actx.state==='suspended')actx.resume().catch(()=>{}); musApply(); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!ducked){ try{ if(actx&&actx.state==='suspended')actx.resume(); musApply(); }catch(e){} } });
 
 
-export { audioInit, musApply, musNextTrack, musTogglePlay, snd, toggleMute, tone };
+export { audioDuck, audioInit, musApply, musNextTrack, musTogglePlay, snd, toggleMute, tone };

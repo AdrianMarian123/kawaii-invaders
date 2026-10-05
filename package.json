@@ -17,7 +17,9 @@
     "test:etapa3": "node dezvoltare/etapa3-test.js",
     "test:reconect": "node dezvoltare/reconect-test.js",
     "test:fum": "node dezvoltare/smoke.js",
-    "test:fum-coop": "node dezvoltare/coop-smoke.js"
+    "test:fum-coop": "node dezvoltare/coop-smoke.js",
+    "sync:android": "node dezvoltare/sync-android-config.js && npx cap sync android",
+    "build:android": "npm run build && npm run sync:android"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",
@@ -34,6 +36,8 @@
     "ws": "^8.18.0"
   },
   "dependencies": {
-    "@capacitor/core": "^8.5.2"
+    "@capacitor-community/admob": "^8.2.0",
+    "@capacitor/core": "^8.5.2",
+    "@revenuecat/purchases-capacitor": "^13.7.0"
   }
 }

@@ -9,6 +9,16 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        // AdMob App ID. Vine din android/admob.properties, generat din .env de
+        // `npm run sync:android`. Fallback pe ID-ul de test al Google, ca o
+        // clona proaspata (fara .env) sa porneasca in loc sa crape.
+        def admobProps = new Properties()
+        def admobFile = rootProject.file("admob.properties")
+        if (admobFile.exists()) { admobFile.withReader("UTF-8") { admobProps.load(it) } }
+        manifestPlaceholders = [
+            admobAppId: admobProps.getProperty("admobAppId", "ca-app-pub-3940256099942544~3347511713")
+        ]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

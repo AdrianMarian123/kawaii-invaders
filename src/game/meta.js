@@ -71,6 +71,11 @@ function saveCoins(){ try{localStorage.setItem('ki_coins',coins);}catch(e){} }
 function saveGems(){ try{localStorage.setItem('ki_gems',gems);}catch(e){} }
 function addGems(n){ gems=Math.max(0,gems+n); saveGems(); updateCoinUI(); }
 function hasLuck(){ return !!shop.owned.i_luck; }
+// Deblocare fara sa treaca prin economia de monede: o cumparatura reala
+// (Billing). Intoarce true doar daca a schimbat ceva, ca apelantul sa deosebeasca
+// o deblocare noua de o reconfirmare la restaurarea cumparaturilor — altfel
+// jucatorul ar primi un toast „deblocat!" la fiecare pornire a jocului.
+function grantOwned(id){ if(!id||shop.owned[id])return false; shop.owned[id]=1; saveShop(); return true; }
 function saveShop(){ try{localStorage.setItem('ki_shop',JSON.stringify(shop));}catch(e){} }
 function saveDaily(){ try{localStorage.setItem('ki_daily',JSON.stringify(dailyMeta));}catch(e){} }
 function saveMissions(){ try{localStorage.setItem('ki_missions',JSON.stringify(missionMeta));}catch(e){} }
@@ -173,6 +178,12 @@ function renderDaily(){ const mo=todaysMod();
 
 // ——— cosmetics shop ———
 let shopTab='aura';
+// Magazinul cu bani reali (Billing) se randeaza din src/monetize/store-ui.js,
+// care se inregistreaza aici la pornire. Asa meta.js nu depinde de RevenueCat,
+// iar pe web — unde Billing nu exista — tabul pur si simplu nu apare.
+let storeUI=null;
+function registerStore(r){ storeUI=r; }
+function storeAvailable(){ try{ return !!(storeUI && storeUI.available()); }catch(e){ return false; } }
 const SHOP_TABS=[['power','⚡ Arme & Boost'],['fleet','💎 Nave'],['ship','Aspect navă'],['weapon','Arme'],['enemy','Monștri'],['wing','Coechipieri'],['aura','Aure'],['trail','Dâre'],['theme','Teme']];
 function openShop(){ audioInit&&audioInit(); ui.menu.classList.add('hide'); el('shop').classList.remove('hide'); renderShop(); }
 function closeShop(){ el('shop').classList.add('hide'); ui.menu.classList.remove('hide'); }
@@ -219,9 +230,15 @@ function shopPreview(cat,it){ const key=cat+':'+it.id; if(_pvCache.has(key))retu
 function renderShop(){ updateCoinUI();
   const OWN_ONLY={power:1,fleet:1};
   const tb=el('shopTabs'); if(tb){ tb.innerHTML='';
-    for(const [k,label] of SHOP_TABS){ const b=document.createElement('button'); b.className='shoptab'+(shopTab===k?' on':'');
+    const tabs=storeAvailable()?SHOP_TABS.concat([['store','💳 Magazin']]):SHOP_TABS;
+    for(const [k,label] of tabs){ const b=document.createElement('button'); b.className='shoptab'+(shopTab===k?' on':'');
       b.textContent=label; b.onclick=()=>{shopTab=k; renderShop();}; tb.appendChild(b); } }
   const grid=el('shopGrid'); if(!grid)return; grid.innerHTML='';
+  if(shopTab==='store'){
+    // daca Billing a devenit indisponibil intre doua randari, nu lasam un tab mort
+    if(storeAvailable()){ storeUI.render(grid, renderShop); return; }
+    shopTab='aura';
+  }
   for(const it of COSMETICS[shopTab]){
     const owned=!!shop.owned[it.id], equipped=!OWN_ONLY[shopTab] && shop.equip[shopTab]===it.id;
     const useGem=!!it.gem, cost=useGem?it.gem:it.price, have=useGem?gems:coins;
@@ -251,4 +268,4 @@ function renderShop(){ updateCoinUI();
 function applyTheme(){ const it=cosmItem('theme',shop.equip.theme); if(!it||!it.col)return;
   try{ document.documentElement.style.setProperty('--pink',it.col); }catch(e){} }
 
-export { addCoins, addGems, applyTheme, checkDailyLogin, closeShop, coins, critCol, dailyMeta, equippedAura, equippedShip, equippedTrail, equippedWeapon, equippedWing, evalMissions, hasLuck, openShop, rainbowCol, renderDaily, saveDaily, shop, todaysMod, updateCoinUI };
+export { addCoins, addGems, applyTheme, checkDailyLogin, closeShop, coins, critCol, dailyMeta, equippedAura, equippedShip, equippedTrail, equippedWeapon, equippedWing, evalMissions, grantOwned, hasLuck, openShop, rainbowCol, registerStore, renderDaily, saveDaily, shop, todaysMod, updateCoinUI };

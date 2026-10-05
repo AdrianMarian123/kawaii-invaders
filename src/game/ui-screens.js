@@ -6,11 +6,12 @@ import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.
 import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
 import { setMenuTheme } from './menu-theme.js';
-import { refreshRelayUI, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
+import { refreshRelayUI, relayIsSet, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
 import { BEAST, CRITCOL, WEAK, WEAPONS } from './config.js';
 import { drawCritter } from '../render/draw.js';
 import { ACHV, achv, runStats } from './achievements.js';
-import { activateBurst, coopReset, daily, fireMissile, netHost, netJoin, score, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
+import { activateBurst, coopReset, coopWake, daily, fireMissile, netHost, netJoin, score, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
+import { maybeShow } from '../monetize/ads.js';
 
 //==================================================================
 const keys={}; let pointer={x:0,y:0,active:false};
@@ -76,8 +77,27 @@ el('coopBack').onclick=()=>{coopReset();el('coopCode').style.display='none';show
 // ori de cate ori se deschide ecranul CO-OP, arata adresa salvata
 try{ new MutationObserver(()=>{ if(!ui.coop.classList.contains('hide')){ try{refreshRelayUI();}catch(e){} } })
       .observe(ui.coop, {attributes:true, attributeFilter:['class']}); }catch(e){}
-el('coopHost').onclick=()=>{audioInit();saveRelayFromField();netHost();};
-el('coopJoin').onclick=()=>{audioInit();saveRelayFromField();const code=(prompt('Introdu codul prietenului:')||'').trim().toUpperCase();if(code)netJoin(code);};
+// In co-op reclama vine o singura data, la intrare, si INAINTE de startRoom():
+// cat e pe ecran WebView-ul e in fundal, iar o conexiune deja deschisa s-ar
+// inchide. Asteptarea de dupa („cod gata · asteapta prietenul") absoarbe
+// natural diferenta de lungime dintre reclamele celor doua telefoane.
+//
+// Serverul de relay e pe plan gratuit si adoarme; trezirea poate lua 30+
+// secunde. O pornim INAINTE de reclama, ca sa se incalzeasca in timp ce
+// jucatorul se uita — altfel el ar astepta reclama PLUS trezirea, in loc de
+// maximul dintre ele. Daca adresa serverului nu e pusa, nu pornim niciun meci,
+// deci nici reclama: lasam startRoom() sa ceara adresa.
+function coopEnter(code){
+  audioInit();
+  const relay=saveRelayFromField();
+  if(!relayIsSet(relay)){ if(code===undefined)netHost(); else netJoin(code); return; }
+  coopWake(relay);
+  return maybeShow(code===undefined?'co-op:gazda':'co-op:invitat')
+    .then(()=>{ if(code===undefined)netHost(); else netJoin(code); });
+}
+el('coopHost').onclick=()=>coopEnter();
+// codul se cere INAINTE de reclama: un prompt peste o reclama abia inchisa e confuz
+el('coopJoin').onclick=()=>{ const code=(prompt('Introdu codul prietenului:')||'').trim().toUpperCase(); if(code)coopEnter(code); };
 el('helpBtn').onclick=()=>{ try{audioInit();}catch(e){} ui.menu.classList.add('hide'); el('help').classList.remove('hide');
   try{ renderMedals(); buildBestiary(); }catch(e){ console.error('help:',e); } };
 { const b=el('helpBack'); if(b)b.onclick=()=>{ el('help').classList.add('hide'); ui.menu.classList.remove('hide'); }; }
@@ -130,10 +150,14 @@ function renderMedals(){ const m=el('medals'); if(!m)return; const got=ACHV.filt
       +(on?'box-shadow:0 0 12px rgba(255,228,107,.4);':'filter:grayscale(1);opacity:.32;')+'">'+a.i+'</div>'; }).join(''); }
 el('storyGo').onclick=startGame;
 el('storyBack').onclick=()=>{ui.story.classList.add('hide');ui.menu.classList.remove('hide');};
-el('againBtn').onclick=startGame;
+// o reclama per meci: dupa ce jucatorul si-a citit scorul, la ieșirea din ecran.
+// Ambele butoane o arata — daca ar fi doar pe „Meniu", cine apasa mereu „Din
+// nou" n-ar vedea niciodata reclama. maybeShow() se rezolva mereu, si cand
+// reclama lipseste sau da eroare.
+el('againBtn').onclick=async()=>{ await maybeShow('final-meci:din-nou'); startGame(); };
 // „📊 detalii” arată/ascunde statisticile de pe ecranul de final
 { const b=el('detailsBtn'); if(b)b.onclick=()=>setOverDetails(el('overDetails').hidden); }
-el('menuBtn').onclick=toMenu;
+el('menuBtn').onclick=async()=>{ await maybeShow('final-meci:meniu'); toMenu(); };
 { const b=el('shareBtn'); if(b)b.onclick=()=>{
     const w=Math.max(runStats.maxWave,wave);
     const line=daily?('📅 Kawaii Invaders — provocarea zilei: '+score.toLocaleString()+' puncte, valul '+w+'! Poți mai mult?')

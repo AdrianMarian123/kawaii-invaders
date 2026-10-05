@@ -15,3 +15,10 @@ android/app/src/main/assets/public/
 android/app/src/main/assets/capacitor.config.json
 *.keystore
 *.jks
+
+
+# Configurarea monetizarii: .env e local (ID-urile tale AdMob/Billing), iar
+# admob.properties e generat din el de `npm run sync:android`.
+.env
+.env.local
+android/admob.properties
