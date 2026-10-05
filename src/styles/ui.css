@@ -48,6 +48,36 @@ body.tsummer .mtopbar .coinPill,body.tsummer .miconbtn,body.tsummer .modechip,bo
   background:linear-gradient(160deg,rgba(40,18,45,.55),rgba(30,12,38,.42));border-color:rgba(255,235,220,.42);
   box-shadow:0 4px 14px rgba(80,30,60,.30)}
 body.tsummer .modechip em,body.tsummer .dsSummary{color:#fff4ee}
+/* ——— tema Halloween: portocaliu de dovleac, mov de vrăjitoare, verde de ceaun ———
+   Doar culori: nicio regulă nu mută butoanele și nu atinge playerul muzical din dreapta. */
+body.thalloween #menu .fxveil{background:radial-gradient(120% 95% at 50% 38%,rgba(20,10,30,.06),rgba(12,5,18,.50))}
+body.thalloween .logo{background:linear-gradient(180deg,#fff4dc 8%,#ffa53b 50%,#b866ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 0 rgba(60,20,8,.8)) drop-shadow(0 0 6px rgba(20,6,30,.75)) drop-shadow(0 0 22px rgba(255,140,40,.5))}
+body.thalloween .logo small{color:#a8ff6e;-webkit-text-fill-color:#a8ff6e}
+body.thalloween .playBtn{color:#3a1405;background:linear-gradient(160deg,#ffd36b,#ff8a1f 55%,#d9500c);
+  box-shadow:0 8px 0 rgba(110,36,6,.8),0 16px 32px rgba(255,120,30,.45),inset 0 -6px 14px rgba(140,40,0,.35)}
+body.thalloween .playBtn:active{box-shadow:0 3px 0 rgba(110,36,6,.8),0 8px 18px rgba(255,120,30,.4),inset 0 -6px 14px rgba(140,40,0,.35)}
+body.thalloween .playBtn span::after{content:" 🎃"}
+body.thalloween .modechip:nth-child(n){background:linear-gradient(160deg,rgba(70,28,100,.78),rgba(26,10,38,.78));
+  border-color:rgba(255,150,60,.62);box-shadow:0 4px 14px rgba(0,0,0,.45),0 0 12px rgba(255,140,40,.18),inset 0 0 12px rgba(170,100,255,.16)}
+body.thalloween .modechip em{color:#ffe2b8}
+body.thalloween .mtopbar .coinPill,body.thalloween .miconbtn,body.thalloween .dsSummary{
+  background:linear-gradient(160deg,rgba(60,24,86,.72),rgba(22,9,32,.66));border-color:rgba(255,150,60,.55);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+body.thalloween .mtopbar .coinPill{color:#ffd58a}
+body.thalloween .mtopbar .gemPill{color:#e2d0ff}
+body.thalloween .dsSummary{color:#ffe2b8}
+body.thalloween .dailyCard{background:linear-gradient(160deg,rgba(50,20,72,.9),rgba(20,8,30,.9));border-color:rgba(255,150,60,.45);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+body.thalloween .dcHead{color:#ffd58a}
+body.thalloween .dcMod{background:linear-gradient(90deg,#ffb347,#ff7a1a)}
+body.thalloween .cibtn{border-color:rgba(255,150,60,.6);background:linear-gradient(180deg,rgba(255,140,40,.26),rgba(80,26,110,.52));
+  box-shadow:0 0 18px rgba(255,140,40,.22),inset 0 1px 0 rgba(255,255,255,.2)}
+body.thalloween .cibtn:hover{background:linear-gradient(180deg,rgba(255,140,40,.44),rgba(100,34,140,.62));box-shadow:0 0 28px rgba(255,140,40,.45),inset 0 1px 0 rgba(255,255,255,.25)}
+body.thalloween .cibtn.go{border-color:rgba(160,255,100,.72);background:linear-gradient(180deg,rgba(150,255,90,.30),rgba(36,100,40,.5));
+  box-shadow:0 0 24px rgba(150,255,90,.38),inset 0 1px 0 rgba(255,255,255,.25)}
+body.thalloween .cibtn.go:hover{background:linear-gradient(180deg,rgba(150,255,90,.48),rgba(46,120,50,.6));box-shadow:0 0 34px rgba(150,255,90,.55),inset 0 1px 0 rgba(255,255,255,.3)}
+body.thalloween .shoptab.on{color:#fff;background:linear-gradient(90deg,#ff8a1f,#b866ff)}
+body.thalloween #story .btn:not(.ghost){background:linear-gradient(180deg,#ffd36b,#ff8a1f);box-shadow:0 8px 0 #9a3c0a,0 16px 28px rgba(0,0,0,.4)}
+body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 16px rgba(0,0,0,.4)}
 .verTag{position:fixed;right:8px;bottom:6px;z-index:60;font:600 10px/1 monospace;color:#fff;opacity:.35;pointer-events:none}
 /* ——— monede, panou zilnic, magazin ——— */
 .coinPill{display:inline-flex;align-items:center;gap:6px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#ffe9a8;
