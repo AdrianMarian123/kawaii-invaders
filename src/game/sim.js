@@ -136,7 +136,7 @@ function startStory(autoStart){
   typeLine();
 }
 function startGame(){
-  audioInit();
+  audioInit(); runBanked=false;
   scoreMul=hardcore?3:1; fireFreqMul=hardcore?0.55:1;
   if(daily){let s=(dailySeed||1)>>>0;Math.random=function(){s=(s*1664525+1013904223)>>>0;return s/4294967296;};}else{Math.random=_origRandom;}
   score=0;wave=0;waveActive=false;betweenT=0;spawnQ=[];spawnIx=0;combo=0;comboT=0;mult=1;warpT=0;traveling=false;raidMode=false;travelMap=null;runAchvNew=[];formBag=[];
@@ -159,8 +159,17 @@ function startGame(){
   if(daily){ setTimeout(()=>toast('📅 PROVOCAREA ZILEI · '+selectedShip.n,'#8fd3ff'),400);
     if(dailyMod&&dailyMod.id!=='none')setTimeout(()=>toast('🎲 '+dailyMod.n+' — '+dailyMod.d,'#ffd24a'),1400); }
 }
-function toMenu(){ coopReset(); el('overTitle').textContent='GAME OVER'; state='menu'; ['story','over','pause','coop','opts','shop','dailyReward','help'].forEach(s=>{const e=el(s);if(e)e.classList.add('hide');});
+function toMenu(){ if(net.mode!=='guest'&&(state==='playing'||state==='paused'||state==='perk'))bankRun(); coopReset(); el('overTitle').textContent='GAME OVER'; state='menu'; ['story','over','pause','coop','opts','shop','dailyReward','help'].forEach(s=>{const e=el(s);if(e)e.classList.add('hide');});
   ui.menu.classList.remove('hide'); ui.touchpad.style.display='none'; if(el('coopCode'))el('coopCode').style.display='none'; renderDaily(); updateCoinUI(); }
+// Monedele şi diamantele culese în rundă intră în pungă o singură dată: la
+// final sau când ieşi în meniu în mijlocul rundei (altfel se pierdeau).
+// În co-op fiecare pleacă acasă doar cu ce a cules el; Ploaie de Aur le dublează.
+let runBanked=true;
+function bankRun(){ if(runBanked)return; runBanked=true;
+  const _mine=(net.mode!=='off'&&p2.active)?(player.coins|0):(runStats.coins|0);
+  if(_mine>0){ let gain=_mine; if(daily&&dailyMod&&dailyMod.id==='rich')gain*=2; addCoins(gain); }
+  const _myGems=(net.mode!=='off'&&p2.active)?(player.gems|0):(runStats.gems|0);
+  if(_myGems>0){ addGems(_myGems); } }
 function gameOver(){ state='over';
   try{ setOverDetails(false); }catch(e){}
   ui.over.classList.remove('hide'); ui.touchpad.style.display='none';   // afișează imediat — fără freeze chiar dacă statisticile aruncă
@@ -172,12 +181,7 @@ function gameOver(){ state='over';
   el('oMissiles').textContent=runStats.missiles; el('oBoss').textContent=runStats.bossKills;
   showCoopSplit(player.score|0, p2.score|0, player.coins|0, p2.coins|0);
   Math.random=_origRandom;
-  // bank the coins collected this run (Ploaie de Aur doubles them) + evaluate daily missions
-  // în co-op fiecare pleacă acasă doar cu ce a cules el
-  const _mine=(net.mode!=='off'&&p2.active)?(player.coins|0):(runStats.coins|0);
-  if(_mine>0){ let gain=_mine; if(daily&&dailyMod&&dailyMod.id==='rich')gain*=2; addCoins(gain); }
-  const _myGems=(net.mode!=='off'&&p2.active)?(player.gems|0):(runStats.gems|0);
-  if(_myGems>0){ addGems(_myGems); }
+  bankRun();   // + evaluate daily missions
   evalMissions();
   if(daily){ dailyMeta.best=Math.max(dailyMeta.best||0,score); saveDaily(); }
   const _bk=hardcore?'ki_best_hc':'ki_best'; const _bv=hardcore?bestHc:best;

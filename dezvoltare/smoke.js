@@ -61,6 +61,19 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   ok(erori.length===b3, 'încă ~3s de joc fără erori'+(erori.length>b3?': '+erori[b3].slice(0,300):''));
   console.log('       scor: "'+s1+'" -> "'+s2+'"');
 
+  // ieşirea în meniu în mijlocul rundei păstrează monedele şi diamantele culese
+  const LS=J.w.localStorage, num=k=>+(LS.getItem(k)||0);
+  const c0=num('ki_coins'), g0=num('ki_gems');
+  rs.coins=(rs.coins|0)+7; rs.gems=(rs.gems|0)+2;
+  const cRun=rs.coins|0, gRun=rs.gems|0;
+  J.click('pauseBtn'); await wait(50);
+  J.click('quitBtn'); await wait(50);
+  ok(!doc.getElementById('menu').classList.contains('hide'), 'butonul „spre meniu" din pauză duce în meniu');
+  ok(num('ki_coins')===c0+cRun, 'monedele rundei rămân după ieșire: '+c0+' + '+cRun+' -> '+num('ki_coins'));
+  ok(num('ki_gems')===g0+gRun, 'diamantele rundei rămân după ieșire: '+g0+' + '+gRun+' -> '+num('ki_gems'));
+  const c1=num('ki_coins'); J.click('quitBtn'); await wait(50);
+  ok(num('ki_coins')===c1, 'a doua ieșire nu le mai adaugă o dată');
+
   console.log('\n=== '+pass+' treceri, '+fail+' eșecuri ===');
   if(erori.length){ console.log('\nprimele erori:'); erori.slice(0,3).forEach(e=>console.log('  '+String(e).slice(0,400))); }
   process.exit(fail?1:0);
