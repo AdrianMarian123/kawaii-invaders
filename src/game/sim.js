@@ -113,6 +113,7 @@ function initBg(){
   ambient=[]; for(let i=0;i<28;i++)ambient.push({x:rand(0,W),y:rand(0,H),v:rand(18,55),sw:rand(0,TAU),swA:rand(8,26),rot:rand(0,TAU),vr:rand(-2,2),s:rand(1.5,3.8)});
 }
 initBg(); hooks.initBg=initBg; addEventListener('resize',initBg);
+const MISSILE_MAX=9;   // ajusteaza de aici daca vrei mai multe/mai putine
 function sector(){return SECTORS[Math.floor((Math.max(1,wave)-1)/10)%SECTORS.length];}
 function nextSectorName(){ const w=wave+1; return SECTORS[Math.floor((Math.max(1,w)-1)/10)%SECTORS.length].name; }
 function sectorIndex(){return Math.floor((Math.max(1,wave)-1)/10)%SECTORS.length;}
@@ -164,7 +165,7 @@ function gameOver(){ state='over';
   try{ setOverDetails(false); }catch(e){}
   ui.over.classList.remove('hide'); ui.touchpad.style.display='none';   // afișează imediat — fără freeze chiar dacă statisticile aruncă
   try{
-  if(net.mode==='host')netSend({t:'over',sc:score,sc1:p2.score|0,sc2:player.score|0,co:p2.coins|0,co2:player.coins|0});
+  if(net.mode==='host')netSend({t:'over',sc:score,sc1:p2.score|0,sc2:player.score|0,co:p2.coins|0,co2:player.coins|0,gm:p2.gems|0});
   ui.finalScore.textContent=score.toLocaleString();
   el('oWave').textContent=Math.max(runStats.maxWave,wave); el('oKills').textContent=runStats.kills;
   el('oCombo').textContent='x'+(runStats.maxMult||1); el('oCoins').textContent=runStats.coins;
@@ -175,7 +176,8 @@ function gameOver(){ state='over';
   // în co-op fiecare pleacă acasă doar cu ce a cules el
   const _mine=(net.mode!=='off'&&p2.active)?(player.coins|0):(runStats.coins|0);
   if(_mine>0){ let gain=_mine; if(daily&&dailyMod&&dailyMod.id==='rich')gain*=2; addCoins(gain); }
-  if(runStats.gems>0){ addGems(runStats.gems); }
+  const _myGems=(net.mode!=='off'&&p2.active)?(player.gems|0):(runStats.gems|0);
+  if(_myGems>0){ addGems(_myGems); }
   evalMissions();
   if(daily){ dailyMeta.best=Math.max(dailyMeta.best||0,score); saveDaily(); }
   const _bk=hardcore?'ki_best_hc':'ki_best'; const _bv=hardcore?bestHc:best;
@@ -194,18 +196,24 @@ function togglePause(){ if(state==='playing'){state='paused';
     ui.pause.classList.remove('hide');}
   else if(state==='paused'){state='playing';ui.pause.classList.add('hide');} }
 
+// `ok` se uita la nava gazdei (ea alege), dar `go` primeste nava pe care o
+// modifica, pentru ca in co-op upgrade-ul e al echipei. Plafoanele sunt in `go`,
+// nu doar in `ok`, ca sa nu depaseasca a doua nava limita primeia.
 const PERKS=[
-  {id:'fire',ic:'⚡',n:'Foc rapid',d:'+20% viteză de tragere',ok:()=>player.fireMul>0.45,go:()=>{player.fireMul*=0.82;}},
-  {id:'dmg',ic:'💥',n:'Daune mărite',d:'+30% daune la tot',ok:()=>player.dmgMul<3.2,go:()=>{player.dmgMul*=1.3;}},
-  {id:'wing',ic:'🐶',n:'Coleg nou',d:'încă o pisicuță ajutor',ok:()=>player.wingmen<2,go:()=>{player.wingmen=Math.min(2,player.wingmen+1);}},
-  {id:'spd',ic:'🏃',n:'Viteză',d:'+20% viteză de mișcare',ok:()=>(player.spdMul||1)<1.8,go:()=>{player.spdMul*=1.2;}},
-  {id:'life',ic:'❤️',n:'Viață în plus',d:'+1 viață (max 6)',ok:()=>player.lives<6,go:()=>{player.lives++;updateHUD();}},
-  {id:'pierce',ic:'🎯',n:'Perforare',d:'gloanțele trec prin +1 inamic',ok:()=>player.pierce<3,go:()=>{player.pierce++;}},
-  {id:'guard',ic:'😇',n:'Înger păzitor',d:'absoarbe o lovitură fără pierdere',ok:()=>(player.guard||0)<3,go:()=>{player.guard=(player.guard||0)+1;}},
-  {id:'big',ic:'🔵',n:'Gloanțe mari',d:'gloanțe mai mari, lovești mai ușor',ok:()=>(player.bulletR||0)<6,go:()=>{player.bulletR=(player.bulletR||0)+2;}},
-  {id:'ammo',ic:'🚀',n:'Muniție',d:'+2 rachete acum',ok:()=>true,go:()=>{player.missiles+=2;updateHUD();}},
-  {id:'burstp',ic:'🔥',n:'Burst extra',d:'+1 încărcătură burst',ok:()=>player.burst<4,go:()=>{player.burst=Math.min(4,player.burst+1);updateHUD();}},
+  {id:'fire',ic:'⚡',n:'Foc rapid',d:'+20% viteză de tragere',ok:()=>player.fireMul>0.45,go:s=>{s.fireMul=Math.max(0.45,s.fireMul*0.82);}},
+  {id:'dmg',ic:'💥',n:'Daune mărite',d:'+30% daune la tot',ok:()=>player.dmgMul<3.2,go:s=>{s.dmgMul=Math.min(3.2,s.dmgMul*1.3);}},
+  {id:'wing',ic:'🐶',n:'Coleg nou',d:'încă o pisicuță ajutor',ok:()=>player.wingmen<2,go:s=>{s.wingmen=Math.min(2,(s.wingmen||0)+1);}},
+  {id:'spd',ic:'🏃',n:'Viteză',d:'+20% viteză de mișcare',ok:()=>(player.spdMul||1)<1.8,go:s=>{s.spdMul=Math.min(1.8,(s.spdMul||1)*1.2);}},
+  {id:'life',ic:'❤️',n:'Viață în plus',d:'+1 viață (max 6)',ok:()=>player.lives<6,go:s=>{if(s.lives<6)s.lives++;updateHUD();}},
+  {id:'pierce',ic:'🎯',n:'Perforare',d:'gloanțele trec prin +1 inamic',ok:()=>player.pierce<3,go:s=>{s.pierce=Math.min(3,(s.pierce||0)+1);}},
+  {id:'guard',ic:'😇',n:'Înger păzitor',d:'absoarbe o lovitură fără pierdere',ok:()=>(player.guard||0)<3,go:s=>{s.guard=Math.min(3,(s.guard||0)+1);}},
+  {id:'big',ic:'🔵',n:'Gloanțe mari',d:'gloanțe mai mari, lovești mai ușor',ok:()=>(player.bulletR||0)<6,go:s=>{s.bulletR=Math.min(6,(s.bulletR||0)+2);}},
+  {id:'ammo',ic:'🚀',n:'Muniție',d:'+2 rachete acum',ok:()=>player.missiles<MISSILE_MAX,go:s=>{s.missiles=Math.min(MISSILE_MAX,s.missiles+2);updateHUD();}},
+  {id:'burstp',ic:'🔥',n:'Burst extra',d:'+1 încărcătură burst',ok:()=>player.burst<4,go:s=>{s.burst=Math.min(4,(s.burst||0)+1);updateHUD();}},
 ];
+// Navele care primesc upgrade-ul. In co-op si oaspetele, chiar daca tocmai e
+// doborat: reapare peste o secunda si ar fi nedrept sa piarda tocmai boss-ul.
+function perkShips(){ return (net.mode!=='off'&&p2.active) ? [player,p2] : [player]; }
 const SHIPS=[
   {id:'mochi',ic:'🐱',n:'Mochi-1',d:'echilibrată, bună pentru oricine',col:null,go:(p)=>{}},
   {id:'bolt',ic:'⚡',n:'Fulger',d:'foc & viteză mari, dar doar 2 vieți',col:'#ffe24a',go:(p)=>{p.fireMul=0.7;p.spdMul=1.3;p.lives=2;}},
@@ -240,7 +248,7 @@ function showPerks(){
     c.onclick=()=>choosePerk(p); box.appendChild(c); }
   el('perkBox').style.display='flex'; state='perk'; if(snd.pickup)snd.pickup();
 }
-function choosePerk(p){ p.go(); player.perks.push(p.id); el('perkBox').style.display='none'; state='playing'; toast(p.ic+' '+p.n,'#ffe46b'); }
+function choosePerk(p){ for(const s of perkShips()) p.go(s); player.perks.push(p.id); el('perkBox').style.display='none'; state='playing'; toast(p.ic+' '+p.n,'#ffe46b'); }
 
 function nextWave(){
   traveling=false; raidMode=false; travelMap=null;
@@ -893,7 +901,7 @@ function collect(p,ship){
     if(ship.weapon===w)ship.lvl[w]=Math.min(9,ship.lvl[w]+1);
     else{ if(ship.lvl[w]===0)ship.lvl[w]=Math.max(1,Math.min(ship.lvl[ship.weapon]||1,3)); ship.weapon=w; }
     floater(p.x,p.y,WEAPONS[w].name+' '+ship.lvl[w],WEAPONS[w].color); toast(who+WEAPONS[w].name.toUpperCase()+' lvl '+ship.lvl[w],WEAPONS[w].color); snd.pickup();
-  } else if(p.type==='missile'){ship.missiles+=2;floater(p.x,p.y,'+2 🚀','#8fd3ff');snd.pickup();}
+  } else if(p.type==='missile'){ if(ship.missiles<MISSILE_MAX){ship.missiles=Math.min(MISSILE_MAX,ship.missiles+2);floater(p.x,p.y,'+2 🚀','#8fd3ff');} else{pts_(500);floater(p.x,p.y,'+500','#ffe46b');} snd.pickup();}
   else if(p.type==='burst'){ if(ship.burst<3){ship.burst++;floater(p.x,p.y,'+1 🔥','#ff8a3b');} else{pts_(500);floater(p.x,p.y,'+500','#ffe46b');} snd.pickup(); }
   else if(p.type==='shield'){ship.shield=9;floater(p.x,p.y,'scut!','#7ef9d2');toast(who+'SCUT ACTIV','#7ef9d2');snd.pickup();}
   else if(p.type==='magnet'){ship.magnet=9;floater(p.x,p.y,'magnet!','#ff8fc7');toast(who+'MAGNET ACTIV 🧲','#ff8fc7');snd.pickup();}
@@ -901,7 +909,7 @@ function collect(p,ship){
   else if(p.type==='life'){ if(ship.lives<6){ship.lives++;floater(p.x,p.y,'+1 💗','#ff8fc7');toast(who+'VIAȚĂ EXTRA 💗','#ff8fc7');} else{pts_(1500);floater(p.x,p.y,'+1500','#ffe46b');} snd.pickup(); }
   else if(p.type==='coin'){ addCombo(); const T=COIN_TIERS[p.tier||0]; runStats.coins+=(T.cur||1); ship.coins=(ship.coins||0)+(T.cur||1);
     const pts=Math.round(rand(T.pts[0],T.pts[1])*scoreNow()); pts_(pts);
-    if(T.gem){ runStats.gems=(runStats.gems||0)+T.gem; }
+    if(T.gem){ runStats.gems=(runStats.gems||0)+T.gem; ship.gems=(ship.gems||0)+T.gem; }
     if((p.tier||0)===3){ floater(p.x,p.y-6,'💎 +'+T.cur+' 🪙',T.col); confetti(p.x,p.y); boom(p.x,p.y,16,T.col); toast(who+'💎 DIAMANT! +'+T.cur+' monede','#9fe9ff'); }
     else floater(p.x,p.y,'+'+pts,T.col);
     snd.coin(); }
@@ -1170,7 +1178,8 @@ function onNetData(m){ if(!m)return;
     if(m.t==='s')applySnapshot(m);
     else if(m.t==='over'){ score=m.sc; state='over';
       if(m.sc1!==undefined)player.score=m.sc1|0; if(m.sc2!==undefined)p2.score=m.sc2|0;
-      if(m.co){ runStats.coins=(m.co|0)+(m.co2|0); addCoins(m.co|0); } ['menu','story','coop','opts','pause'].forEach(s=>ui[s].classList.add('hide'));
+      if(m.co){ runStats.coins=(m.co|0)+(m.co2|0); addCoins(m.co|0); }
+      if(m.gm){ addGems(m.gm|0); }   // diamantele oaspetelui, pe care gazda i le trimite ['menu','story','coop','opts','pause'].forEach(s=>ui[s].classList.add('hide'));
       try{ setOverDetails(false); }catch(e){}
       ui.over.classList.remove('hide'); ui.finalScore.textContent=score.toLocaleString(); el('overTitle').textContent='CO-OP TERMINAT';
       el('oWave').textContent=Math.max(runStats.maxWave,wave); el('oKills').textContent=runStats.kills;
@@ -1208,7 +1217,7 @@ function netSnapshot(){
   // vedea arma cu electricitate. Forma compacta [x1,y1,x2,y2,cat a mai ramas] — sunt multe.
   const zp=zaps.slice(0,24).map(z=>[P(z.x1/iw),P(z.y1/ih),P(z.x2/iw),P(z.y2/ih),+(z.life/(z.max||1)).toFixed(2)]);
   const snap={t:'s',sc:score|0,wv:wave|0,lv:player.lives|0,cm:mult||1,
-    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,zp:zp,
+    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,zp:zp,gv:gravityMode?1:0,
     hw:iw, hh:ih, wm:player.wingmen|0,
     // frenezia e a echipei intregi (bonus de viteza pentru amandoi): fara ea in
     // instantaneu, oaspetele nu vedea niciodata aura, bara sau anuntul "FRENEZIE!"
@@ -1292,6 +1301,7 @@ function applySnapshot(m){
   // aura, bara sau anuntul de FRENEZIE, desi bonusul de viteza tot se aplica pe gazda
   const wasFrenzy=frenzyT>0;
   frenzy=m.fz||0; frenzyT=m.fzt||0;
+  gravityMode=!!m.gv;   // altfel oaspetele n-are voie in zona de sus si nu vede fantana
   if(frenzyT>0&&!wasFrenzy){ flash=0.4; flashCol='#ffd1ec'; shake(11,.32); toast('FRENEZIE! 🌟','#ff8fc7'); }
   if(m.fl){flash=0.3;flashCol=m.fl;}
   if(m.bt!==undefined){ bossIntro=INTRO_DUR-m.bt; introBoss={type:m.bty,name:m.bnm,col:m.bco,acc:m.bac||null,leafBoss:!!m.blf,style:m.bst||0,slammed:true}; } else bossIntro=0;

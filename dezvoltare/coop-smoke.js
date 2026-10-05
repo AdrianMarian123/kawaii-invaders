@@ -265,6 +265,16 @@ const copii=[];
   await wait(500);
   { const gMe=await gEval("return document.getElementById('oScoreMe').textContent.replace(/[^0-9]/g,'')");
     ok(gMe===await hEval('return String(__dbg.p2.score|0)'),'oaspetele își vede în coloana lui scorul LUI: '+gMe); }
+  // ---- Etapa 5: oaspetele chiar incaseaza ce a cules ----
+  { const got=await gEval(`return {
+        co: Number(localStorage.getItem('ki_coins')||0),
+        ge: Number(localStorage.getItem('ki_gems')||0) }`);
+    const sent=await hEval('return {co: __dbg.p2.coins|0, ge: __dbg.p2.gems|0}');
+    ok(sent.co===0 || got.co>=sent.co,
+       'monedele oaspetelui ajung in punga lui: a cules '+sent.co+', are '+got.co);
+    ok(sent.ge===0 || got.ge>=sent.ge,
+       'gemurile oaspetelui ajung in punga lui: a cules '+sent.ge+', are '+got.ge); }
+
   ok(await errs()===0,'ecranul final fără erori'+((await errs())?': '+await primaEroare():''));
 
   console.log('\n=== '+pass+' treceri, '+fail+' eșecuri ===');
