@@ -93,11 +93,25 @@ const PROC_TRACKS={
   drift:{step:0.34,type:'sine',vol:0.06,bvol:0.085,sparkle:false,
     lead:['A4',0,'C5',0,'E5',0,'C5',0,'F4',0,'A4',0,'C5',0,'A4',0,'E4',0,'G4',0,'C5',0,'G4',0,'G4',0,'B4',0,'D5',0,'B4',0],
     bass:{0:'A2',8:'F2',16:'C3',24:'G2'}}};
-const TRACKS=[{id:'sunny',n:'Sunny Hill Dash 🎧'},{id:'lost',n:'Memories of a Lost Level 🎼'},{id:'kawaii',n:'Sugar Swarm 🍬'},{id:'drift',n:'Cosmic Drift 🌌'}];
+// Piesele cu `f` sunt fișiere MP3 din public/music/: se descarcă doar când le
+// alegi în player, nu la pornire, deci nu îngreunează încărcarea jocului.
+const TRACKS=[{id:'sunny',n:'Sunny Hill Dash 🎧'},{id:'lost',n:'Memories of a Lost Level 🎼'},{id:'kawaii',n:'Sugar Swarm 🍬'},{id:'drift',n:'Cosmic Drift 🌌'},
+  {id:'anime-intro-1',n:'Anime Intro 🌸',f:'music/anime-intro-1.mp3'},{id:'anime-4',n:'Anime 4 🌸',f:'music/anime-4.mp3'},
+  {id:'japanese-1',n:'Japanese 1 🎎',f:'music/japanese-1.mp3'},{id:'k-pop',n:'K-Pop 💖',f:'music/k-pop.mp3'},
+  {id:'k-pop-3',n:'K-Pop 3 💖',f:'music/k-pop-3.mp3'},{id:'k-pop-4',n:'K-Pop 4 💖',f:'music/k-pop-4.mp3'},
+  {id:'happy-electronic',n:'Happy Electronic 😄',f:'music/happy-electronic.mp3'},{id:'electronic-1',n:'Electronic 1 ⚡',f:'music/electronic-1.mp3'},
+  {id:'electronic-2',n:'Electronic 2 ⚡',f:'music/electronic-2.mp3'},{id:'electro-3',n:'Electro 3 ⚡',f:'music/electro-3.mp3'},
+  {id:'capsule',n:'Capsule 💊',f:'music/capsule.mp3'},{id:'run-circle',n:'Run Circle 🏃',f:'music/run-circle.mp3'},
+  {id:'rhythmic-1',n:'Rhythmic 1 🥁',f:'music/rhythmic-1.mp3'},{id:'dubstep-1',n:'Dubstep 1 🔊',f:'music/dubstep-1.mp3'},
+  {id:'dubstep-2',n:'Dubstep 2 🔊',f:'music/dubstep-2.mp3'}];
 try{ musicOn=(localStorage.getItem('ki_mus_on')!=='0');
   const tid=localStorage.getItem('ki_mus_track'); const ix=TRACKS.findIndex(t=>t.id===tid); if(ix>=0)musTrackIx=ix; }catch(e){}
 function curTrack(){ return TRACKS[musTrackIx]; }
-function mp3Src(id){ return (window.__MUS__&&window.__MUS__[id])||null; }
+// URL absolut: a.src întoarce mereu forma absolută, iar comparația din musApply()
+// trebuie să-l recunoască, altfel piesa ar reporni de la zero la fiecare apel.
+function mp3Src(t){ if(window.__MUS__&&window.__MUS__[t.id]) return window.__MUS__[t.id];
+  if(t.f){ try{ return new URL(t.f,document.baseURI).href; }catch(e){ return t.f; } }
+  return null; }
 function musSave(){ try{localStorage.setItem('ki_mus_on',musicOn?'1':'0');localStorage.setItem('ki_mus_track',curTrack().id);}catch(e){} }
 function mnote(freq,dur,type,vol,at){ if(!actx||!musicGain)return;
   const o=actx.createOscillator(),g=actx.createGain(); o.type=type; o.frequency.setValueAtTime(freq,at);
@@ -118,7 +132,7 @@ function ensureMusicClock(){ if(musClock||!actx)return;
 function ensureAudioEl(){ if(musAudio)return musAudio;
   try{ musAudio=new Audio(); musAudio.loop=true; musAudio.volume=0.55; }catch(e){}
   return musAudio; }
-function musApply(){ const t=curTrack(); const src=mp3Src(t.id);
+function musApply(){ const t=curTrack(); const src=mp3Src(t);
   if(src&&musicOn&&!muted){ const a=ensureAudioEl(); if(a){ if(a.src!==src)a.src=src; a.muted=false; a.play().catch(()=>{}); try{ routeMusicEl(); }catch(e){} } }
   else if(musAudio){ try{musAudio.pause();}catch(e){} }
   if((t.id in PROC_TRACKS)&&musicOn&&!muted){ audioInit(); ensureMusicClock(); }
