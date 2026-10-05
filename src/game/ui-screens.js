@@ -1,7 +1,7 @@
 // Intrarea de la jucator (tastatura, touch, pointer) si cablarea tuturor
 // ecranelor de meniu: butoane, optiuni grafice, bestiar, medalii, co-op,
 // video-ul de intro. Ruleaza la incarcare si doar leaga handlere.
-import { audioInit, musLevel, musNextTrack, musTogglePlay, snd, toggleMute } from './audio.js';
+import { audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musTogglePlay, musTrackName, snd, toggleMute } from './audio.js';
 import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.js';
 import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
@@ -79,6 +79,15 @@ el('optsBack').onclick=()=>{ui.opts.classList.add('hide');ui.menu.classList.remo
     requestAnimationFrame(tick);
   } }
 
+// Browserul refuză muzica până la primul gest al jucătorului: la fiecare
+// atingere/tastă o pornim, până când chiar sună. Înainte stătea în boot-ui.js,
+// unde după împărțirea pe module nu mai avea acces la player şi nu pornea nimic.
+{ let toasted=false;
+  const kick=()=>{ try{ audioInit(); audioResume(); musApply();
+      if(musPlaying()){ if(!toasted){ toasted=true; try{toast('🎵 '+musTrackName(),'#c9a6ff');}catch(e){} }
+        window.removeEventListener('pointerdown',kick); window.removeEventListener('keydown',kick); window.removeEventListener('touchend',kick); }
+    }catch(e){} };
+  window.addEventListener('pointerdown',kick); window.addEventListener('keydown',kick); window.addEventListener('touchend',kick); }
 { const d=el('musDockBtn'); if(d)d.onclick=()=>{ const p=el('musPanel'); if(p)p.classList.toggle('hide'); };
   const pv=el('musPrev'); if(pv)pv.onclick=()=>musNextTrack(-1);
   const nx=el('musNext'); if(nx)nx.onclick=()=>musNextTrack(1);
