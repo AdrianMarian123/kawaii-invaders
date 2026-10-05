@@ -188,6 +188,18 @@ body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 
 #over,#shop,#pause,#opts{overflow-y:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start;padding-top:18px;padding-bottom:28px}
 #over .pcard,#pause .pcard{margin:auto}
 #shop .shopgrid{max-height:none;overflow:visible}
+/* „← înapoi" trebuie să fie mereu la vedere: grila creşte cât conţinutul, iar
+   #shop e containerul care derulează, deci pe un ecran lat şi scund butonul
+   ajungea sub marginea de jos şi părea că nu există ieşire din magazin.
+   Fixat în colţul din stânga-jos, nu centrat: grila e centrată şi lată de cel
+   mult 540px, aşa că acolo nu acoperă niciun card. Centrat, stătea exact peste
+   butonul de preţ al unui produs. */
+#shopBack{position:fixed;left:14px;bottom:14px;margin:0;z-index:7;
+  font-size:clamp(14px,3.6vw,17px);padding:9px 16px;
+  background:linear-gradient(180deg,rgba(60,24,70,.94),rgba(40,14,52,.96));
+  box-shadow:0 6px 22px rgba(0,0,0,.5)}
+/* ultimul rând de carduri trebuie să poată urca deasupra butonului */
+#shop{padding-bottom:76px}
 .sw{overflow:hidden;display:flex;align-items:center;justify-content:center}
 .sw.pv{background:rgba(255,255,255,.06)}
 .sw.pv canvas{width:46px;height:46px;display:block}
