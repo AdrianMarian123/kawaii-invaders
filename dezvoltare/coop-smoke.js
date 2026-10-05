@@ -82,6 +82,30 @@ const copii=[];
       return {c0, c1:__dbg.p2.coins}`);
     ok(r.c1>r.c0,'moneda intră în punga lui P2: '+r.c1); }
 
+  // ---- butoanele 🚀/🔥 de pe ecran: fiecare își cheltuie rachetele și burst-ul LUI ----
+  // Click adevărat pe buton, la gazdă și la oaspete. Golim terenul ca racheta să nu lase
+  // cadouri (o rachetă +2 culeasă între timp ar strica numărătoarea).
+  {
+    const curat=`__dbg.enemies.length=0; __dbg.eBullets.length=0; __dbg.pickups.length=0;
+      __dbg.set.frenzy(0); __dbg.set.frenzyT(0); __dbg.set.bossIntro(0);`;
+    const stare=`return {m1:__dbg.player.missiles,b1:__dbg.player.burst,t1:__dbg.player.burstT>0,
+      m2:__dbg.p2.missiles,b2:__dbg.p2.burst,t2:__dbg.p2.burstT>0}`;
+    const arata=r=>'gazda 🚀'+r.m1+' 🔥'+r.b1+(r.t1?'*':'')+' · P2 🚀'+r.m2+' 🔥'+r.b2+(r.t2?'*':'');
+    await hEval(curat+` for(const sh of [__dbg.player,__dbg.p2]){ sh.missiles=3; sh.burst=2; sh.burstT=0; sh.magnet=0; } return null`);
+    await H.click('btnMissile'); await H.click('btnBurst');
+    let r=await hEval(curat+stare);
+    ok(r.m1===2&&r.b1===1&&r.t1,'butoanele gazdei: racheta și burst-ul ei ('+arata(r)+')');
+    ok(r.m2===3&&r.b2===2&&!r.t2,'și nu ating nava oaspetelui ('+arata(r)+')');
+    await G.click('btnMissile'); await G.click('btnBurst');
+    await tick(15);
+    r=await hEval(curat+stare);
+    ok(r.m2===2&&r.b2===1&&r.t2,'butoanele oaspetelui ajung la gazdă pe nava LUI ('+arata(r)+')');
+    ok(r.m1===2&&r.b1===1,'gazda nu pierde nimic din ale ei ('+arata(r)+')');
+    const hud=await gEval("return document.getElementById('missC').textContent+'/'+document.getElementById('burstC').textContent");
+    ok(hud==='2/1','oaspetele își vede pe ecran rachetele și burst-ul rămase: '+hud);
+    await hEval(`for(const sh of [__dbg.player,__dbg.p2]) sh.burstT=0; return null`);
+  }
+
   // ---- ASPECTUL inamicilor: ce vede gazda trebuie sa vada si oaspetele ----
   // Bug-ul de la valul 8: asteroizii ajungeau la oaspete ca pui, fiindca steagul
   // `asteroid` nu calatorea in instantaneu. Testul compara RAMURA DE DESEN, nu campurile.

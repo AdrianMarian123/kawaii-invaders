@@ -31,10 +31,18 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   for(let i=0;i<60;i++) await wait(16);
   ok(erori.length===before, 'rulează ~1s de joc fără erori'+(erori.length>before?': '+erori[before].slice(0,300):''));
 
-  // butoanele de racheta si burst
-  const b2=erori.length;
+  // butoanele de racheta si burst: chiar consuma din proviziile navei.
+  // Un click adevarat trimite evenimentul ca prim argument — nu trebuie luat drept nava.
+  const b2=erori.length, P=J.dbg.player, rs=J.dbg.runStats;
+  const m0=P.missiles, u0=P.burst;
   J.click('btnMissile');
+  ok(P.missiles===m0-1, 'racheta scade din rachetele navei: '+m0+' -> '+P.missiles);
   J.click('btnBurst');
+  ok(P.burstT>0 && P.burst===u0-1, 'burst-ul pornește pe navă: încărcături '+u0+' -> '+P.burst+', burstT='+P.burstT);
+  const r0=rs.missiles, mSalvat=P.missiles; P.missiles=0;
+  J.click('btnMissile');
+  ok(P.missiles===0 && rs.missiles===r0, 'fără rachete, butonul nu mai trage (lansate: '+r0+' -> '+rs.missiles+')');
+  P.missiles=mSalvat;
   for(let i=0;i<30;i++) await wait(16);
   ok(erori.length===b2, 'racheta și burst-ul merg'+(erori.length>b2?': '+erori[b2].slice(0,300):''));
 

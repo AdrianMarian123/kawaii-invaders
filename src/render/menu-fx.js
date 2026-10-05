@@ -1,11 +1,51 @@
-// Scenele animate din spatele meniului: plaja de vara (palmieri, valuri,
-// recuzita) si spatiul clasic. Doar decor — nu ating starea jocului.
+// Scenele animate din spatele meniului: padurea bantuita de Halloween, plaja
+// de vara (palmieri, valuri, recuzita) si spatiul clasic. Doar decor — nu ating
+// starea jocului.
 import { menuTheme } from '../game/menu-theme.js';
 import { H, W, bgImg, ctx, sprite } from '../game/canvas.js';
+import { lowFx } from '../game/sim.js';
 import { TAU } from '../game/utils.js';
 import { drawCritter, hexA } from './draw.js';
 
-function drawMenuFx(){ if(menuTheme==='summer'){ try{ drawMenuSummer(); return; }catch(e){ /* cade pe tema clasică */ } } drawMenuSpace(); }
+function drawMenuFx(){ if(menuTheme==='summer'){ try{ drawMenuSummer(); return; }catch(e){ /* cade pe tema clasică */ } }
+  if(menuTheme==='halloween'){ try{ drawMenuHalloween(); return; }catch(e){ /* cade pe tema clasică */ } }
+  drawMenuSpace(); }
+// ——— pădurea bântuită (Halloween) ———
+function drawMenuHalloween(){
+  const t=performance.now()/1000, im=bgImg('halloween');
+  if(!im){   // poza încă se decodează: un amurg cu culorile ei, ca să nu clipească tema galactică
+    const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#182022'); g.addColorStop(1,'#472514');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H); return; }
+  const iw=im.naturalWidth, ih=im.naturalHeight;
+  const br=1.012+0.010*Math.sin(t*0.22);                     // respirație foarte lentă; mereu puțin peste „cover”, ca să nu apară margini
+  const cover=Math.max(W/iw,H/ih), fitW=W/iw, tall=cover/fitW>1.30;
+  // ecran înalt: nu tăiem toate personajele din lateral; poza stă jos, iar sus rămâne pădurea întunecată, sub logo
+  const sc=(tall?Math.max(fitW,cover*0.58):cover)*br;
+  const dw=iw*sc, dh=ih*sc, dx=(W-dw)/2, dy=(tall?H-dh+2:(H-dh)/2)+Math.sin(t*0.17)*2;
+  if(dy>0){ ctx.fillStyle='#182022'; ctx.fillRect(0,0,W,dy+2); }                  // sus: pădurea
+  if(dy+dh<H){ ctx.fillStyle='#472514'; ctx.fillRect(0,dy+dh-2,W,H-(dy+dh)+2); }  // jos: frunzele
+  ctx.drawImage(im,dx,dy,dw,dh);
+  if(tall){ const f=Math.min(dh*0.22,140);                   // marginea de sus topită, fără linie tăiată
+    const g=ctx.createLinearGradient(0,dy,0,dy+f); g.addColorStop(0,'#182022'); g.addColorStop(1,'rgba(24,32,34,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,dy,W,f); }
+  const P=(u,v)=>[dx+u*dw,dy+v*dh];                          // punct din poză → ecran
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  { const [cx,cy]=P(0.815,0.56), r=dw*0.11*(1+0.08*Math.sin(t*2.1));   // ceaunul pulsează verde
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,'rgba(150,255,90,.22)'); g.addColorStop(1,'rgba(150,255,90,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,TAU); ctx.fill(); }
+  { const [gx,gy]=P(0.575,0.22), r=dw*0.085*(1+0.06*Math.sin(t*1.3));  // fantoma respiră
+    const g=ctx.createRadialGradient(gx,gy,0,gx,gy,r); g.addColorStop(0,'rgba(190,230,255,.16)'); g.addColorStop(1,'rgba(190,230,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(gx,gy,r,0,TAU); ctx.fill(); }
+  const nb=lowFx?6:12;                                        // bule verzi care urcă din ceaun
+  for(let i=0;i<nb;i++){ const ph=(t*0.35+i/nb)%1, [bx,by]=P(0.75+0.13*((i*0.618)%1),0.54);
+    const x=bx+Math.sin(t*1.7+i*2.3)*dw*0.012, y=by-ph*dh*0.35, r=Math.max(1.2,dw*0.0035*(1-ph*0.6));
+    ctx.fillStyle='rgba(170,255,110,'+(0.55*(1-ph)).toFixed(3)+')'; ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill(); }
+  const nf=lowFx?8:16;                                        // licurici portocalii prin pădure
+  for(let i=0;i<nf;i++){ const x=((i*137.5+t*(6+(i%4)*2))%(W+40))-20, y=H*0.08+((i*97.3)%(H*0.62))+Math.sin(t*0.9+i)*10;
+    const a=0.12+0.38*Math.abs(Math.sin(t*1.3+i*1.7)); ctx.fillStyle='rgba(255,190,90,'+a.toFixed(3)+')';
+    ctx.beginPath(); ctx.arc(x,y,(i%5===0)?2.2:1.4,0,TAU); ctx.fill(); }
+  ctx.restore();
+}
 // ——— palmier ———
 function drawPalm(bx,by,h,t,dir){
   ctx.save(); ctx.translate(bx,by);
