@@ -34,6 +34,25 @@ import { BEAST, BOSS_NAME, CRITCOL, CRITTERS, EVENT_NAME, LCOLS, SECTORS, STORY,
 // STATE
 //==================================================================
 let state='menu';
+// God mode: unealta de dezvoltare, fara niciun buton in interfata. Se aprinde
+// tastand „god" (vezi ui-screens.js).
+//
+// Exista DOAR cand VITE_DEV_TOOLS=true in .env. In build-ul de release flagul e
+// fals, deci nicio tasta nu o poate porni — nu e doar ascunsa, e inchisa. Altfel
+// un jucator pe web, cu tastatura, ar fi dat peste ea.
+//
+// Nu se salveaza nicaieri: la repornirea jocului e iar stinsa. godRun tine minte
+// ca a fost pornita in runda curenta, ca sa nu-i stricam jucatorului recordul cu
+// o rulare in care era invincibil.
+const DEV_TOOLS = import.meta.env?.VITE_DEV_TOOLS === 'true';
+let godMode=false, godRun=false;
+function setGod(on){ if(!DEV_TOOLS)return false; godMode=!!on; if(godMode)godRun=true; return godMode; }
+function isGod(){ return godMode; }
+// Sare peste valul curent. Golim inamicii si coada de aparitii, apoi lasam
+// logica normala de „val terminat" sa ruleze — asa primim si perk-urile, si
+// calatoria dintre planete, fara sa dublam progresia aici.
+function skipWave(){ if(!DEV_TOOLS||!godMode)return;
+  enemies.length=0; eBullets.length=0; spawnQ.length=0; bonusMode=false; }
 let score=0, best=0; try{best=Number(localStorage.getItem('ki_best')||0);}catch(e){}
 let bestHc=0; try{bestHc=Number(localStorage.getItem('ki_best_hc')||0);}catch(e){}
 let hardcore=false, scoreMul=1, fireFreqMul=1;
@@ -133,7 +152,7 @@ function startGame(){
   ['menu','story','over','pause','coop','opts'].forEach(s=>ui[s].classList.add('hide'));
   { const pb=el('perkBox'); if(pb)pb.style.display='none'; }
   ui.touchpad.style.display='flex';
-  state='playing'; nextWave(); updateHUD();
+  godRun=godMode; state='playing'; nextWave(); updateHUD();
   if(!daily&&!hardcore){ setTimeout(()=>toast('👆 Ține apăsat oriunde ca să miști nava','#8fd3ff'),700); setTimeout(()=>toast('✨ Tragi automat — distruge inamicii!','#ffe46b'),3300); setTimeout(()=>toast('🚀🔥 Butoanele din stânga = arme speciale','#ff8fc7'),5900); setTimeout(()=>toast('⭐ Adună stele și bomboane','#7ef9d2'),8500); }
   if(hardcore)setTimeout(()=>toast('💀 HARDCORE · scor ×3','#ff5a6a'),400);
   if(daily){ setTimeout(()=>toast('📅 PROVOCAREA ZILEI · '+selectedShip.n,'#8fd3ff'),400);
@@ -162,6 +181,7 @@ function gameOver(){ state='over';
   const _bk=hardcore?'ki_best_hc':'ki_best'; const _bv=hardcore?bestHc:best;
   const _my=myScore();                     // în co-op recordul e partea TA, ca să rămână comparabil cu solo
   if(daily){ ui.bestLine.textContent='📅 provocarea zilnică · '+score.toLocaleString(); }
+  else if(godRun){ ui.bestLine.textContent='🛡️ god mode — scorul nu se salvează'; }
   else if(_my>_bv){ if(hardcore)bestHc=_my; else best=_my; try{localStorage.setItem(_bk,_my);}catch(e){} ui.bestLine.textContent=(hardcore?'💀 record nou hardcore!':'✨ record nou!');}
   else ui.bestLine.textContent='cel mai bun'+(hardcore?' (hardcore)':'')+': '+_bv.toLocaleString();
   // newly earned achievements this run (so feedback shows regardless of ship/run)
@@ -941,6 +961,7 @@ function confetti(x,y){ const cols=['#ff8fc7','#ffe46b','#8fd3ff','#c89bff','#7e
   for(let i=0;i<60;i++)particles.push(part(x,y,rand(0,TAU),rand(120,420),cols[randi(0,4)],rand(.6,1.3),rand(2,5))); }
 function part(x,y,a,sp,color,life,r){return {x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,color,life,max:life,r:r||3};}
 function hitPlayer(){
+  if(godMode)return;
   if(player.invuln>0||player.dead)return;
   if(player.shield>0){player.shield=0;player.invuln=1.2;floater(player.x,player.y-26,'scut spart','#7ef9d2');shake(10,.3);snd.hurt();return;}
   if((player.guard||0)>0){player.guard--;player.invuln=1.6;floater(player.x,player.y-26,'😇 păzit!','#ffe46b');shake(10,.3);snd.hurt();updateHUD();return;}
@@ -1306,16 +1327,39 @@ function guestUpdate(dt){
   // deci fara asta orice tremur sau fulger (moarte, frenezie) ramanea blocat pe ecran
   if(flash>0)flash=Math.max(0,flash-dt*1.6);
   if(shakeT>0)shakeT=Math.max(0,shakeT-dt);
+  updateScenery(dt);     // fundalul e local si decorativ, dar trebuie sa se miste si aici
 }
 // Lovitura merge la nava atinsă: vieți, scut și moarte proprii. Cealaltă navă joacă mai departe.
-function hitTeam(ship){ if(ship.invuln>0||ship.dead)return;
+function hitTeam(ship){ if(godMode||ship.invuln>0||ship.dead)return;
   if(ship.shield>0){ship.shield=0;ship.invuln=1.4;floater(ship.x,ship.y-26,'scut spart','#7ef9d2');shake(10,.3);snd.hurt();return;}
   ship.lives--; ship.hitThisWave=true; if(ship===player)runStats.hitThisWave=true; snd.hurt(); boom(ship.x,ship.y,30,'#7ef9d2'); shake(18,.5); combo=0;mult=1; updateHUD();
   if(ship.lives<=0){ ship.dead=true; ship.deadT=1.1; if(ship===p2)toast('P2 a fost doborât 💔','#ff8fc7'); }
   else { ship.invuln=2.4; ship.x=W/2; ship.y=H-130; } }
+// Tot ce misca in fundal: stele, praf, nebuloase, nori, stele cazatoare, petalele
+// sezoniere, scanteile si derapajul de parallax. Nimic din toate astea nu tine de
+// reguli de joc, deci nu se sincronizeaza prin retea — dar TREBUIE sa ruleze si la
+// oaspete. Statea doar in update()-ul gazdei, iar oaspetele iese devreme din el,
+// asa ca la el cerul ramanea complet inghetat: planeta si luna lipseau (pozitia lor
+// vine din bgScroll), iar petalele stateau pe loc.
+function updateScenery(dt){
+  bgScroll+=dt*(1+warpT*7);
+  for(const s of stars0){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
+  for(const s of stars1){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
+  for(const s of stars2){s.y+=s.v*dt; s.tw+=dt*3; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
+  for(const d of dust){d.y+=d.v*dt; if(d.y-6>H){d.y=-6;d.x=rand(0,W);}}
+  for(const n of nebs){n.y+=n.v*dt; if(n.y-n.r>H){n.y=-n.r;n.x=rand(0,W);}}
+  for(const c of clouds){c.y+=c.v*dt; if(c.y-c.r>H){c.y=-c.r;c.x=rand(0,W);c.r=rand(200,380);c.a=rand(.05,.11);c.vi=randi(0,2);}}
+  for(const s of warpStars){ s.y+=dt*(36+warpT*1700)*s.v; if(s.y>H+8){s.y=-8;s.x=rand(0,W);} }
+  for(const s of fgSparks){ s.y-=s.v*dt; s.tw+=dt*2.5; if(s.y<-6){s.y=H+6;s.x=rand(0,W);} }
+  for(const a of ambient){ a.y+=a.v*dt; a.sw+=dt*1.5; a.rot+=a.vr*dt; if(a.y>H+8){a.y=-8;a.x=rand(0,W);} }
+  if(!traveling && shootStars.length<2 && Math.random()<dt*0.10)
+    shootStars.push({x:rand(W*0.05,W*0.95),y:rand(-20,H*0.25),vx:(Math.random()<.5?1:-1)*rand(260,420),vy:rand(150,260),life:rand(.6,1.0),max:.9});
+  for(const ss of shootStars){ ss.x+=ss.vx*dt; ss.y+=ss.vy*dt; ss.life-=dt; }
+  if(shootStars.length)shootStars=shootStars.filter(s=>s.life>0);
+}
 function update(dt){
   if(net.mode==='guest'){ guestUpdate(dt); return; }
-  bgScroll+=dt*(1+warpT*7); formT+=dt; chainT+=dt;
+  formT+=dt; chainT+=dt;
   _ftA+=dt; _ftN++;
   if(_ftN>=120){ const avg=_ftA/_ftN; if(avg>0.024)lowFx=true; else if(avg<0.017)lowFx=false; _ftA=0; _ftN=0; }
   // formation choreography: slow constant descent toward the player + periodic swoop-dive waves
@@ -1338,9 +1382,6 @@ function update(dt){
       player.x+=(pp.x-player.x)*Math.min(1,dt*6); player.y+=(pp.y-player.y)*Math.min(1,dt*6);
     } else { player.x+=(W/2-player.x)*Math.min(1,dt*2.4); player.y+=(H*0.74-player.y)*Math.min(1,dt*2.4); }
   } else { warpT=clamp(warpT-dt/0.35,0,1); travelScale=1; }
-  for(const s of warpStars){ s.y+=dt*(36+warpT*1700)*s.v; if(s.y>H+8){s.y=-8;s.x=rand(0,W);} }
-  for(const s of fgSparks){ s.y-=s.v*dt; s.tw+=dt*2.5; if(s.y<-6){s.y=H+6;s.x=rand(0,W);} }
-  for(const a of ambient){ a.y+=a.v*dt; a.sw+=dt*1.5; a.rot+=a.vr*dt; if(a.y>H+8){a.y=-8;a.x=rand(0,W);} }
   checkAchv();
   if(bossIntro>0){ bossIntro-=dt; const tt=INTRO_DUR-bossIntro;
     if(introBoss&&!introBoss.slammed&&tt>=2.05){ introBoss.slammed=true;
@@ -1528,18 +1569,7 @@ function update(dt){
   }
   if(!waveActive){betweenT-=dt; if(betweenT<=0)nextWave();}
 
-  // bg motion
-  for(const s of stars0){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
-  for(const s of stars1){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
-  for(const s of stars2){s.y+=s.v*dt; s.tw+=dt*3; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
-  for(const d of dust){d.y+=d.v*dt; if(d.y-6>H){d.y=-6;d.x=rand(0,W);}}
-  for(const n of nebs){n.y+=n.v*dt; if(n.y-n.r>H){n.y=-n.r;n.x=rand(0,W);}}
-  for(const c of clouds){c.y+=c.v*dt; if(c.y-c.r>H){c.y=-c.r;c.x=rand(0,W);c.r=rand(200,380);c.a=rand(.05,.11);c.vi=randi(0,2);}}
-  // occasional shooting star streaking across the sky
-  if(!traveling && shootStars.length<2 && Math.random()<dt*0.10)
-    shootStars.push({x:rand(W*0.05,W*0.95),y:rand(-20,H*0.25),vx:(Math.random()<.5?1:-1)*rand(260,420),vy:rand(150,260),life:rand(.6,1.0),max:.9});
-  for(const ss of shootStars){ ss.x+=ss.vx*dt; ss.y+=ss.vy*dt; ss.life-=dt; }
-  if(shootStars.length)shootStars=shootStars.filter(s=>s.life>0);
+  updateScenery(dt);
 
   if(net.mode==='host'){ net.snapT-=dt; if(net.snapT<=0){ net.snapT=0.05; netSnapshot(); } }
 }
@@ -1637,4 +1667,4 @@ window.__dbg = { hitTeam, collect, activeShips, fireAllShips, fireFrom, fireMiss
          enemies:a=>enemies=a, bullets:a=>bullets=a, eBullets:a=>eBullets=a,
          pickups:a=>pickups=a, beams:a=>beams=a, zaps:a=>zaps=a } };
 
-export { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, coopWake, daily, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };
+export { COIN_TIERS, DEV_TOOLS, INTRO_DUR, TRAVEL_DUR, isGod, setGod, skipWave, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, coopWake, daily, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };

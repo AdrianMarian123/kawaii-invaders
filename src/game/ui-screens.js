@@ -6,11 +6,11 @@ import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.
 import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
 import { setMenuTheme } from './menu-theme.js';
-import { refreshRelayUI, relayIsSet, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
+import { getRelay, refreshRelayUI, relayIsSet, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
 import { BEAST, CRITCOL, WEAK, WEAPONS } from './config.js';
 import { drawCritter } from '../render/draw.js';
 import { ACHV, achv, runStats } from './achievements.js';
-import { activateBurst, coopReset, coopWake, daily, fireMissile, net, netHost, netJoin, score, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
+import { activateBurst, coopReset, coopWake, daily, fireMissile, isGod, net, netHost, netJoin, score, setGod, skipWave, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
 import { maybeShow } from '../monetize/ads.js';
 
 // Cat o reclama e pe ecran butonul ramane apasabil: fara poarta, al doilea tap
@@ -19,7 +19,10 @@ import { maybeShow } from '../monetize/ads.js';
 function gate(fn){ let busy=false; return async(...a)=>{ if(busy)return; busy=true; try{ await fn(...a); }finally{ busy=false; } }; }
 
 //==================================================================
-const keys={}; let pointer={x:0,y:0,active:false};
+// Calculat local, nu importat: asa Vite il pliaza la minificare si tot blocul de
+// unelte de dezvoltare dispare din build-ul de release, nu doar ramane inactiv.
+const DEV_TOOLS = import.meta.env?.VITE_DEV_TOOLS === 'true';
+const keys={}; let pointer={x:0,y:0,active:false}; let godBuf='';
 addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k))e.preventDefault();
@@ -29,6 +32,17 @@ addEventListener('keydown',e=>{
   if(k==='c')activateBurst();
   if(k==='m')toggleMute();
   if(k==='enter'&&state==='menu')startStory(false);
+  // Unealta de dezvoltare: tastezi „god" si nu mai pierzi vieti, ca sa poti
+  // urmari nivelurile pana la capat. Nu exista buton pentru ea — pe telefon,
+  // fara tastatura, nu e accesibila. Scorul rundei nu se mai salveaza ca record.
+  // Uneltele de dezvoltare exista doar cu VITE_DEV_TOOLS=true; in release blocul
+  // asta nu face nimic, oricate taste s-ar apasa.
+  if(DEV_TOOLS){
+    if(k==='n'&&isGod()&&state==='playing')skipWave();   // „n" sare peste valul curent
+    if(k.length===1){ godBuf=(godBuf+k).slice(-3);
+      if(godBuf==='god'){ godBuf=''; const on=setGod(!isGod());
+        toast(on?'🛡️ GOD MODE pornit — scorul nu se salvează':'god mode oprit', on?'#ffe46b':'#8fd3ff'); } }
+  }
 });
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 cv.addEventListener('pointerdown',e=>{audioInit();pointer.active=true;ptr(e);});
@@ -94,7 +108,12 @@ try{ new MutationObserver(()=>{ if(!ui.coop.classList.contains('hide')){ try{ref
 // deci nici reclama: lasam startRoom() sa ceara adresa.
 const coopEnter=gate(async(code)=>{
   audioInit();
-  const relay=saveRelayFromField();
+  saveRelayFromField();            // salveaza ce a tastat jucatorul, daca a tastat
+  // Adresa efectiva o cerem de la getRelay() (camp > localStorage > cea livrata),
+  // adica exact sursa pe care o foloseste si startRoom(). saveRelayFromField()
+  // intoarce doar continutul campului, completat de UI — deciziile de aici n-ar
+  // trebui sa atarne de starea unui input.
+  const relay=getRelay();
   if(relayIsSet(relay)){ coopWake(relay); await maybeShow('co-op'); }
   if(code===undefined)netHost(); else netJoin(code);
 });

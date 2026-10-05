@@ -245,7 +245,7 @@ body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 
 }
 @media (orientation:landscape) and (max-height:560px){
   /* lasă liberă coloana din dreapta (pauză, sunet, muzică și panoul ei) */
-  #over{padding:8px 228px 8px 12px}
+  #over{padding:8px 228px}   /* simetric: cardul ramane centrat, dar tot ocoleste coloana din dreapta */
   #over .overCard{flex-direction:row;align-items:center;gap:14px;max-width:100%;max-height:calc(100% - 4px)}
   #over .overMain{gap:5px}
   #over .overDetails{align-self:stretch;justify-content:safe center;max-width:300px}
@@ -253,7 +253,7 @@ body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 
   #over .overDetails .chip{min-width:62px;padding:3px 6px}
 }
 @media (orientation:landscape) and (max-height:560px) and (max-width:640px){
-  #over{padding-right:76px}
+  #over{padding:8px 76px}
 }
 /* pe vertical (fereastră îngustă de PC) bara coboară sub HUD; în dreapta lasă loc coloanei pauză/sunet/muzică */
 @media (orientation:portrait){ .mtopbar{margin-top:48px;padding:0 40px 0 0} }
