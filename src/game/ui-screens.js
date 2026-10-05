@@ -1,7 +1,7 @@
 // Intrarea de la jucator (tastatura, touch, pointer) si cablarea tuturor
 // ecranelor de meniu: butoane, optiuni grafice, bestiar, medalii, co-op,
 // video-ul de intro. Ruleaza la incarcare si doar leaga handlere.
-import { audioInit, musNextTrack, musTogglePlay, snd, toggleMute } from './audio.js';
+import { audioInit, musLevel, musNextTrack, musTogglePlay, snd, toggleMute } from './audio.js';
 import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.js';
 import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
@@ -54,6 +54,31 @@ el('coopBtn').onclick=()=>{audioInit();ui.menu.classList.add('hide');ui.coop.cla
 el('gfxBtn').onclick=()=>{audioInit();updateGfxUI();ui.menu.classList.add('hide');ui.opts.classList.remove('hide');};
 el('optsBack').onclick=()=>{ui.opts.classList.add('hide');ui.menu.classList.remove('hide');};
 { const b=el('shopBtn'); if(b)b.onclick=()=>openShop(); }
+// Chenarul panoului de muzică licăreşte pe beat şi îşi roteşte culoarea prin
+// albastru neon → mov → roz. Bucla merge doar cât panoul e deschis: închis,
+// nu are rost să calculăm nimic.
+{ const BEAT_COLS=[[56,232,255],[168,85,247],[255,111,176]];   // albastru neon, mov, roz
+  const panel=el('musPanel');
+  if(panel){
+    const tick=()=>{
+      requestAnimationFrame(tick);
+      // Nu ne uităm la clasa „hide": pe #musPanel ea n-a avut niciodată o regulă
+      // CSS (vezi .musPanel.hide mai jos, adăugată acum), iar cat bucla se oprea
+      // pe ea nu se executa nimic. document.hidden e verificarea care conteaza:
+      // aplicaţia în fundal nu are ce desena.
+      if(document.hidden) return;
+      const b=musLevel();
+      // culoarea se roteşte lent prin cele trei, independent de puls
+      const p=(performance.now()/2600)%1*BEAT_COLS.length;
+      const i=Math.floor(p), f=p-i;
+      const c1=BEAT_COLS[i%BEAT_COLS.length], c2=BEAT_COLS[(i+1)%BEAT_COLS.length];
+      const c=[0,1,2].map(k=>Math.round(c1[k]+(c2[k]-c1[k])*f));
+      panel.style.setProperty('--beat', b.toFixed(3));
+      panel.style.setProperty('--beatCol', 'rgb('+c[0]+','+c[1]+','+c[2]+')');
+    };
+    requestAnimationFrame(tick);
+  } }
+
 { const d=el('musDockBtn'); if(d)d.onclick=()=>{ const p=el('musPanel'); if(p)p.classList.toggle('hide'); };
   const pv=el('musPrev'); if(pv)pv.onclick=()=>musNextTrack(-1);
   const nx=el('musNext'); if(nx)nx.onclick=()=>musNextTrack(1);

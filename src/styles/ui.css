@@ -183,6 +183,23 @@ body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 
 #musDockBtn.off{opacity:.45;filter:grayscale(.7)}
 .musGrip{position:relative;width:100%;text-align:center;font-size:13px;letter-spacing:3px;color:#c9b3e6;opacity:.85;cursor:grab;user-select:none;-webkit-user-select:none;margin:-4px 0 -2px}
 .musPanel{touch-action:none}
+/* Panoul porneşte cu clasa „hide" în index.html şi butonul 🎵 o comută, dar nu
+   exista nicio regula pentru ea: singura din proiect e .screen.hide, iar
+   #musPanel nu e .screen. Rezultatul era un player de muzică permanent peste
+   zona de joc şi un buton 🎵 care nu făcea nimic. */
+.musPanel.hide{display:none}
+/* Chenarul reactiv: --beat (0..1) şi --beatCol vin din ui-screens.js la fiecare
+   cadru. Fără ele (JS neîncărcat) rămân valorile de rezervă şi panoul arată ca
+   înainte. Glow-ul e pe box-shadow, nu pe un pseudo-element, ca să nu ne batem
+   cu stacking context-ul panoului (are deja z-index şi position). */
+.musPanel{
+  border-color:color-mix(in srgb, var(--beatCol,#fff) calc(35% + var(--beat,0)*65%), rgba(255,255,255,.25));
+  box-shadow:0 8px 24px rgba(0,0,0,.45),
+             0 0 calc(5px + var(--beat,0)*20px) var(--beatCol,transparent),
+             inset 0 0 calc(2px + var(--beat,0)*9px) color-mix(in srgb, var(--beatCol,#fff) calc(20% + var(--beat,0)*40%), transparent);
+  transition:none}
+/* butonul mare de play prinde şi el pulsul, ca să nu pară chenarul lipit */
+.musPanel .musCtl.big{box-shadow:0 0 calc(var(--beat,0)*14px) var(--beatCol,transparent)}
 .musPanel.dragging{cursor:grabbing;box-shadow:0 12px 32px rgba(0,0,0,.6),0 0 0 2px rgba(255,143,199,.5)}
 /* ——— overlay-urile pot derula; game over/pauză compacte în landscape ——— */
 #over,#shop,#pause,#opts{overflow-y:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start;padding-top:18px;padding-bottom:28px}
