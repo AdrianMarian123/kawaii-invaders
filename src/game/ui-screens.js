@@ -10,8 +10,13 @@ import { refreshRelayUI, relayIsSet, saveRelayFromField, showCoopIntro } from '.
 import { BEAST, CRITCOL, WEAK, WEAPONS } from './config.js';
 import { drawCritter } from '../render/draw.js';
 import { ACHV, achv, runStats } from './achievements.js';
-import { activateBurst, coopReset, coopWake, daily, fireMissile, netHost, netJoin, score, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
+import { activateBurst, coopReset, coopWake, daily, fireMissile, net, netHost, netJoin, score, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
 import { maybeShow } from '../monetize/ads.js';
+
+// Cat o reclama e pe ecran butonul ramane apasabil: fara poarta, al doilea tap
+// ar porni actiunea de doua ori (doua meciuri, sau o a doua camera de co-op cu
+// alt cod decat cel deja trimis prietenului).
+function gate(fn){ let busy=false; return async(...a)=>{ if(busy)return; busy=true; try{ await fn(...a); }finally{ busy=false; } }; }
 
 //==================================================================
 const keys={}; let pointer={x:0,y:0,active:false};
@@ -87,14 +92,12 @@ try{ new MutationObserver(()=>{ if(!ui.coop.classList.contains('hide')){ try{ref
 // jucatorul se uita — altfel el ar astepta reclama PLUS trezirea, in loc de
 // maximul dintre ele. Daca adresa serverului nu e pusa, nu pornim niciun meci,
 // deci nici reclama: lasam startRoom() sa ceara adresa.
-function coopEnter(code){
+const coopEnter=gate(async(code)=>{
   audioInit();
   const relay=saveRelayFromField();
-  if(!relayIsSet(relay)){ if(code===undefined)netHost(); else netJoin(code); return; }
-  coopWake(relay);
-  return maybeShow(code===undefined?'co-op:gazda':'co-op:invitat')
-    .then(()=>{ if(code===undefined)netHost(); else netJoin(code); });
-}
+  if(relayIsSet(relay)){ coopWake(relay); await maybeShow('co-op'); }
+  if(code===undefined)netHost(); else netJoin(code);
+});
 el('coopHost').onclick=()=>coopEnter();
 // codul se cere INAINTE de reclama: un prompt peste o reclama abia inchisa e confuz
 el('coopJoin').onclick=()=>{ const code=(prompt('Introdu codul prietenului:')||'').trim().toUpperCase(); if(code)coopEnter(code); };
@@ -150,14 +153,17 @@ function renderMedals(){ const m=el('medals'); if(!m)return; const got=ACHV.filt
       +(on?'box-shadow:0 0 12px rgba(255,228,107,.4);':'filter:grayscale(1);opacity:.32;')+'">'+a.i+'</div>'; }).join(''); }
 el('storyGo').onclick=startGame;
 el('storyBack').onclick=()=>{ui.story.classList.add('hide');ui.menu.classList.remove('hide');};
-// o reclama per meci: dupa ce jucatorul si-a citit scorul, la ieșirea din ecran.
-// Ambele butoane o arata — daca ar fi doar pe „Meniu", cine apasa mereu „Din
-// nou" n-ar vedea niciodata reclama. maybeShow() se rezolva mereu, si cand
-// reclama lipseste sau da eroare.
-el('againBtn').onclick=async()=>{ await maybeShow('final-meci:din-nou'); startGame(); };
+// O reclama per meci, dupa ce jucatorul si-a citit scorul. Ambele butoane o
+// arata: daca ar fi doar pe „Meniu", cine apasa mereu „Din nou" n-ar vedea
+// niciodata reclama. In co-op sarim — reclama de acolo e la intrare, iar aici ar
+// trimite WebView-ul in fundal cu conexiunea deschisa.
+// O SINGURA poarta pentru ambele butoane: cu una pe buton, „Din nou" urmat de
+// „Meniu" ar trece pe sub aceeasi reclama si ai ajunge in meniu dintr-un meci.
+const overGo=gate(async(go)=>{ if(net.mode==='off') await maybeShow('final-meci'); go(); });
+el('againBtn').onclick=()=>overGo(startGame);
 // „📊 detalii” arată/ascunde statisticile de pe ecranul de final
 { const b=el('detailsBtn'); if(b)b.onclick=()=>setOverDetails(el('overDetails').hidden); }
-el('menuBtn').onclick=async()=>{ await maybeShow('final-meci:meniu'); toMenu(); };
+el('menuBtn').onclick=()=>overGo(toMenu);
 { const b=el('shareBtn'); if(b)b.onclick=()=>{
     const w=Math.max(runStats.maxWave,wave);
     const line=daily?('📅 Kawaii Invaders — provocarea zilei: '+score.toLocaleString()+' puncte, valul '+w+'! Poți mai mult?')

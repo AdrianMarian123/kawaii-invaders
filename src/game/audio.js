@@ -86,7 +86,7 @@ function musTogglePlay(){ musicOn=!musicOn; musSave(); musApply(); }
 let ducked=false;
 function audioDuck(on){ ducked=!!on;
   try{ if(on){ if(musAudio)musAudio.pause(); if(actx&&actx.state==='running')actx.suspend(); }
-       else { if(actx&&actx.state==='suspended')actx.resume().catch(()=>{}); musApply(); } }catch(e){} }
+       else { if(actx)actx.resume().catch(()=>{}); musApply(); } }catch(e){} }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!ducked){ try{ if(actx&&actx.state==='suspended')actx.resume(); musApply(); }catch(e){} } });
 
 
