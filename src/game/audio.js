@@ -1,5 +1,5 @@
 // Sunetul jocului: efecte procedurale (WebAudio) + playerul muzical
-// (MP3 incorporat sau piese procedurale). Un singur modul: cele doua
+// (fisiere MP3 din public/music/). Un singur modul: cele doua
 // jumatati impart contextul audio si starea de mute.
 import { el, ui } from './utils.js';
 
@@ -41,7 +41,7 @@ let musicOn=true, musTrackIx=0, musAudio=null, musicGain=null, musClock=null, mu
 // Analizorul care alimentează licărirea panoului de muzică. Piesele procedurale
 // trec prin musicGain, deci le putem asculta direct. Cele din MP3 sunt un element
 // <audio> care sună pe lângă AudioContext — createMediaElementSource() îl aduce în
-// graf. Sursele sunt data: URL, deci acelaşi origin: analizorul chiar primeşte date.
+// graf. Fişierele vin din public/music/, deci acelaşi origin: analizorul chiar primeşte date.
 let musAnalyser=null, _musFreq=null, _musSrc=null, _musLvl=0;
 function ensureAnalyser(){
   if(!actx) return null;
@@ -86,17 +86,12 @@ function musLevel(){
   return 0.30+0.40*Math.pow(Math.max(0,Math.sin(t*3.1)),3);
 }
 const NF={G2:98.00,A2:110.00,F2:87.31,C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196.00,A3:220.00,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,C6:1046.50};
-const PROC_TRACKS={
-  kawaii:{step:0.245,type:'triangle',vol:0.05,bvol:0.075,sparkle:true,
-    lead:['E5','G5','E5','C5','D5',0,'E5','D5','D5','B4','D5','G4','B4',0,'D5','B4','C5','E5','A4','C5','E5',0,'A5','E5','A4','C5','F4','A4','C5',0,'A4','G4'],
-    bass:{0:'C3',4:'C3',8:'G2',12:'G2',16:'A2',20:'A2',24:'F2',28:'F2'}},
-  drift:{step:0.34,type:'sine',vol:0.06,bvol:0.085,sparkle:false,
-    lead:['A4',0,'C5',0,'E5',0,'C5',0,'F4',0,'A4',0,'C5',0,'A4',0,'E4',0,'G4',0,'C5',0,'G4',0,'G4',0,'B4',0,'D5',0,'B4',0],
-    bass:{0:'A2',8:'F2',16:'C3',24:'G2'}}};
+// Piese generate din note (motorul de mai jos). Momentan niciuna în player;
+// o intrare aici + un id în TRACKS o readuce.
+const PROC_TRACKS={};
 // Piesele cu `f` sunt fișiere MP3 din public/music/: se descarcă doar când le
 // alegi în player, nu la pornire, deci nu îngreunează încărcarea jocului.
-const TRACKS=[{id:'sunny',n:'Sunny Hill Dash 🎧'},{id:'lost',n:'Memories of a Lost Level 🎼'},{id:'kawaii',n:'Sugar Swarm 🍬'},{id:'drift',n:'Cosmic Drift 🌌'},
-  {id:'anime-intro-1',n:'Anime Intro 🌸',f:'music/anime-intro-1.mp3'},{id:'anime-4',n:'Anime 4 🌸',f:'music/anime-4.mp3'},
+const TRACKS=[{id:'anime-intro-1',n:'Anime Intro 🌸',f:'music/anime-intro-1.mp3'},{id:'anime-4',n:'Anime 4 🌸',f:'music/anime-4.mp3'},
   {id:'japanese-1',n:'Japanese 1 🎎',f:'music/japanese-1.mp3'},{id:'k-pop',n:'K-Pop 💖',f:'music/k-pop.mp3'},
   {id:'k-pop-3',n:'K-Pop 3 💖',f:'music/k-pop-3.mp3'},{id:'k-pop-4',n:'K-Pop 4 💖',f:'music/k-pop-4.mp3'},
   {id:'happy-electronic',n:'Happy Electronic 😄',f:'music/happy-electronic.mp3'},{id:'electronic-1',n:'Electronic 1 ⚡',f:'music/electronic-1.mp3'},
@@ -109,7 +104,7 @@ try{ musicOn=(localStorage.getItem('ki_mus_on')!=='0');
 function curTrack(){ return TRACKS[musTrackIx]; }
 // URL absolut: a.src întoarce mereu forma absolută, iar comparația din musApply()
 // trebuie să-l recunoască, altfel piesa ar reporni de la zero la fiecare apel.
-function mp3Src(t){ if(window.__MUS__&&window.__MUS__[t.id]) return window.__MUS__[t.id];
+function mp3Src(t){
   if(t.f){ try{ return new URL(t.f,document.baseURI).href; }catch(e){ return t.f; } }
   return null; }
 function musSave(){ try{localStorage.setItem('ki_mus_on',musicOn?'1':'0');localStorage.setItem('ki_mus_track',curTrack().id);}catch(e){} }
