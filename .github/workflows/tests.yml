@@ -7,7 +7,10 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  # Numele "tests" e verificarea ceruta de regula de protectie a lui main;
+  # cu alt nume, PR-ul asteapta la nesfarsit "Waiting for status to be reported".
+  tests:
+    name: tests
     runs-on: ubuntu-latest
     steps:
       - name: Ia fisierele din repo
