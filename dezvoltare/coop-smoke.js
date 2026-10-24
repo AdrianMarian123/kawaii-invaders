@@ -198,11 +198,14 @@ const copii=[];
     ok(await inv()===0,'si dupa cadouri (diferenta '+await inv()+')');
 
     // pragul de viata bonus: al fiecaruia, pe scorul lui
-    const lives0=await hEval('return __dbg.p2.lives');
+    // Jocul ruleaza intre timp: daca P2 doboara un inamic in tick-uri, poate trece pragul
+    // singur, iar atunci viata bonus e corecta. Citim scorul si vietile in acelasi eval.
+    const lives0=await hEval('return __dbg.p2.lives'), prag=await hEval('return __dbg.p2.nextLife');
     await hEval('__dbg.addScore(__dbg.p2, __dbg.p2.nextLife-(__dbg.p2.score|0)-10); return null');
     await tick(4);
-    ok(await hEval('return __dbg.p2.lives')===lives0,'sub prag inca nu primeste nimic');
-    await hEval('__dbg.addScore(__dbg.p2,20); return null');
+    { const r=await hEval('return {lives:__dbg.p2.lives, score:__dbg.p2.score|0}');
+      ok(r.score>=prag||r.lives===lives0,'sub prag inca nu primeste nimic'); }
+    await hEval('__dbg.addScore(__dbg.p2, Math.max(0,'+prag+'-(__dbg.p2.score|0))+10); return null');
     await tick(6);
     const lives1=await hEval('return __dbg.p2.lives');
     ok(lives1===lives0+1,'P2 isi ia viata bonus pe scorul LUI: '+lives0+' -> '+lives1);
@@ -222,10 +225,18 @@ const copii=[];
   await wait(300);
   ok(await gEval('return __dbg.player.lives')===5,'oaspetele își vede viețile lui (5), nu pe ale gazdei (2): '+await gEval('return __dbg.player.lives'));
   ok(await gEval('return __dbg.p2.lives')===2,'și separat pe ale gazdei: '+await gEval('return __dbg.p2.lives'));
-  await hEval('__dbg.updateHUD(); return null'); await gEval('__dbg.updateHUD(); return null'); await wait(50);
-  { const hv=await hEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
-    const gv=await gEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
-    const hs=await hEval('return String(__dbg.player.score|0)'), gs=await hEval('return String(__dbg.p2.score|0)');
+  // Jocul merge mai departe intre citiri: daca P2 mai doboara un inamic, scorul de la
+  // gazda o ia inaintea instantaneului ajuns la oaspete. Reincercam pana se potrivesc
+  // (sau 2 s), ca sa nu pice la intamplare pe un calculator mai lent (CI).
+  { let hv,gv,hs,gs;
+    for(let n=0;n<40;n++){
+      await hEval('__dbg.updateHUD(); return null'); await gEval('__dbg.updateHUD(); return null');
+      hv=await hEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
+      gv=await gEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
+      hs=await hEval('return String(__dbg.player.score|0)'); gs=await hEval('return String(__dbg.p2.score|0)');
+      if(hv===hs&&gv===gs)break;
+      await wait(50);
+    }
     ok(hv===hs,'HUD-ul gazdei arată scorul EI: '+hv);
     ok(gv===gs,'HUD-ul oaspetelui arată scorul LUI: '+gv);
     ok(hv!==gv,'și cele două nu mai sunt același număr'); }
