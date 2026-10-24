@@ -1,7 +1,7 @@
 // Intrarea de la jucator (tastatura, touch, pointer) si cablarea tuturor
 // ecranelor de meniu: butoane, optiuni grafice, bestiar, medalii, co-op,
 // video-ul de intro. Ruleaza la incarcare si doar leaga handlere.
-import { audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musTogglePlay, musTrackName, snd, toggleMute } from './audio.js';
+import { audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musRelease, musTogglePlay, musTrackName, snd, toggleMute } from './audio.js';
 import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.js';
 import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
@@ -177,25 +177,38 @@ function buildBestiary(){ const c=el('bestiary'); if(!c||c._built)return; c._bui
     c.appendChild(row);
   }
 }
-// --- intro video (with baked chiptune music), shown once before the menu ---
+// --- intro: logo-ul companiei, apoi trailerul jocului; se arata o data, inainte de meniu ---
+// Fisierele stau in public/video/ (copiate neschimbate in dist/), nu in sprites-data.js.
+const INTRO_VIDEOS=['video/cascride_interactive_studios_intro_720p.mp4','video/kawaii_invaders_intro_720p.mp4'];
 function initIntro(){
-  const data=window.__INTRO__, scr=el('introScreen'), vid=el('introVid'), bg=el('introBg'), hint=el('introSound'), skip=el('introSkip');
-  if(!data||!scr||!vid){ if(scr)scr.style.display='none'; return; }
-  let done=false;
+  const scr=el('introScreen'), vid=el('introVid'), bg=el('introBg'), hint=el('introSound'), skip=el('introSkip');
+  if(!scr||!vid){ if(scr)scr.style.display='none'; musRelease(); return; }
+  let done=false, idx=0, muted=false;
   const finish=()=>{ if(done)return; done=true; try{vid.pause(); if(bg)bg.pause();}catch(e){}
+    musRelease();
     scr.style.transition='opacity .5s'; scr.style.opacity='0';
     setTimeout(()=>{ scr.style.display='none'; try{vid.removeAttribute('src'); vid.load(); if(bg){bg.removeAttribute('src'); bg.load();}}catch(e){} },520); };
-  if(bg){ bg.src=data; bg.muted=true; bg.play().catch(()=>{}); }
-  vid.src=data; scr.style.display='flex'; vid.muted=true;
-  vid.play().then(()=>{ vid.muted=false; hint.style.display='none'; }).catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); });
-  const unmute=()=>{ vid.muted=false; hint.style.display='none'; };
+  const play=()=>{
+    if(idx>=INTRO_VIDEOS.length){ finish(); return; }
+    const src=INTRO_VIDEOS[idx];
+    if(bg){ bg.src=src; bg.muted=true; bg.play().catch(()=>{}); }
+    vid.src=src;
+    // Intai cu sunet (si ramane asa la al doilea video): in aplicatia Android (WebView) merge fara nicio atingere. Un browser
+    // il refuza pana la primul gest — atunci pornim mut si cerem o atingere.
+    vid.muted=muted;
+    vid.play().then(()=>{ if(!vid.muted)hint.style.display='none'; }).catch(()=>{ muted=true; vid.muted=true; hint.style.display=''; vid.play().catch(()=>{}); });
+  };
+  const next=()=>{ if(done)return; idx++; play(); };
+  scr.style.display='flex';
+  const unmute=()=>{ muted=false; vid.muted=false; hint.style.display='none'; };
   const onTap=e=>{ if(e&&e.target===skip)return; vid.play().catch(()=>{}); unmute(); };
   scr.addEventListener('pointerdown',onTap);
   scr.addEventListener('touchstart',onTap,{passive:true});
   scr.addEventListener('click',onTap);
   skip.addEventListener('click',e=>{ e.stopPropagation(); finish(); });
-  vid.addEventListener('ended',finish);
-  vid.addEventListener('error',finish);
+  vid.addEventListener('ended',next);
+  vid.addEventListener('error',next);
+  play();
 }
 initIntro();
 function renderMedals(){ const m=el('medals'); if(!m)return; const got=ACHV.filter(a=>achv[a.id]).length;

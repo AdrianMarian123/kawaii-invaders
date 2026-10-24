@@ -22,3 +22,4 @@ android/app/src/main/assets/capacitor.config.json
 .env
 .env.local
 android/admob.properties
+.vs/

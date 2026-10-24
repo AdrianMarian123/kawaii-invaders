@@ -120,14 +120,19 @@ function ensureMusicClock(){ if(musClock||!actx)return;
     const an=ensureAnalyser(); if(an)musicGain.connect(an); }   // ramură paralelă: doar ascultă
   musNextTime=actx.currentTime+0.1;
   musClock=setInterval(()=>{ const t=curTrack();
-    if(!actx||muted||!musicOn||!(t.id in PROC_TRACKS)){ musNextTime=actx.currentTime+0.08; return; }
+    if(!actx||muted||musHeld||!musicOn||!(t.id in PROC_TRACKS)){ musNextTime=actx.currentTime+0.08; return; }
     const P=PROC_TRACKS[t.id];
     while(musNextTime<actx.currentTime+0.35){ procStep(P,musStep,musNextTime); musNextTime+=P.step; musStep=(musStep+1)%P.lead.length; }
   },60); }
 function ensureAudioEl(){ if(musAudio)return musAudio;
   try{ musAudio=new Audio(); musAudio.loop=true; musAudio.volume=0.55; }catch(e){}
   return musAudio; }
+// Cat ruleaza videourile de intro, muzica de meniu sta pe loc ca sa nu sune peste
+// sunetul lor. Pornita doar daca exista ecranul de intro; musRelease() o elibereaza.
+let musHeld=!!document.getElementById('introScreen');
+function musRelease(){ if(!musHeld)return; musHeld=false; musApply(); }
 function musApply(){ const t=curTrack(); const src=mp3Src(t);
+  if(musHeld){ if(musAudio){ try{musAudio.pause();}catch(e){} } return; }
   if(src&&musicOn&&!muted){ const a=ensureAudioEl(); if(a){ if(a.src!==src)a.src=src; a.muted=false; a.play().catch(()=>{}); try{ routeMusicEl(); }catch(e){} } }
   else if(musAudio){ try{musAudio.pause();}catch(e){} }
   if((t.id in PROC_TRACKS)&&musicOn&&!muted){ audioInit(); ensureMusicClock(); }
@@ -139,7 +144,7 @@ function musTogglePlay(){ musicOn=!musicOn; musSave(); musApply(); }
 // Adevărat când muzica chiar sună (sau jucătorul a oprit-o). La pornire play()
 // e refuzat de browser până la primul gest, deci ui-screens.js reîncearcă la
 // fiecare atingere până când asta devine adevărat.
-function musPlaying(){ const t=curTrack(); if(!musicOn)return true;
+function musPlaying(){ const t=curTrack(); if(!musicOn)return true; if(musHeld)return false;
   if(t.id in PROC_TRACKS) return !!(actx&&actx.state==='running');
   return !!(musAudio&&!musAudio.paused); }
 function musTrackName(){ return curTrack().n; }
@@ -157,4 +162,4 @@ function audioDuck(on){ ducked=!!on;
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!ducked){ try{ if(actx&&actx.state==='suspended')actx.resume(); musApply(); }catch(e){} } });
 
 
-export { audioDuck, audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musTogglePlay, musTrackName, snd, toggleMute, tone };
+export { audioDuck, audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musRelease, musTogglePlay, musTrackName, snd, toggleMute, tone };
