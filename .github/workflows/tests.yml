@@ -1,24 +1,17 @@
-# Ruleaza testele automate din dezvoltare/ la fiecare pull request.
-# Numele jobului ("tests") e verificarea ceruta inainte de unirea in main.
+# Ruleaza suita de teste automate din dezvoltare/ pe orice PR spre main.
+# Deployul (pages.yml) ramane neschimbat: doar push pe main, fara nicio legatura cu asta.
 name: Teste
 
 on:
   pull_request:
-  push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
+  # Numele "tests" e verificarea ceruta de regula de protectie a lui main;
+  # cu alt nume, PR-ul asteapta la nesfarsit "Waiting for status to be reported".
   tests:
     name: tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: dezvoltare
     steps:
       - name: Ia fisierele din repo
         uses: actions/checkout@v4
@@ -26,10 +19,12 @@ jobs:
       - name: Instaleaza Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      - name: Instaleaza ws si jsdom
-        run: npm install --no-audit --no-fund
+      - name: Instaleaza dependintele
+        run: npm ci
 
-      - name: Ruleaza toate testele
+      - name: Ruleaza testele
         run: npm test

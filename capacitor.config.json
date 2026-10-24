@@ -1,0 +1,9 @@
+{
+  "appId": "com.kawaiiinvaders.game",
+  "appName": "Kawaii Invaders",
+  "webDir": "dist",
+  "backgroundColor": "#0a0518",
+  "android": {
+    "backgroundColor": "#0a0518"
+  }
+}

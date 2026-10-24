@@ -1,25 +1,37 @@
 # Dezvoltare
 
-Testele automate pentru jocul din rădăcina repo-ului. **Toate citesc direct
-`../index.html`** — adică exact fișierul care se publică, nu o copie care poate rămâne
-în urmă.
+Testele automate pentru jocul din rădăcina repo-ului. Toate pornesc jocul
+**adevărat** — modulele din `../src/`, exact cele care ajung și în build —
+peste un DOM fals (jsdom) sau, pentru co-op, în procese-copil separate.
 
 ## Cum le rulezi
 
-O singură dată, ca să aduci `ws` și `jsdom`:
+O singură dată, din **rădăcina** repo-ului (nu de aici):
 
 ```bash
-cd dezvoltare
 npm install
 ```
 
-Apoi:
+Apoi, tot din rădăcină:
 
 ```bash
 npm test            # tot (~2 minute)
 npm run test:unit   # doar cele rapide (~30 s)
 npm run test:joc    # doar jocul rulat pe bune (~1,5 minute)
 ```
+
+## Cum funcționează
+
+- `mediu-joc.js` — pornește o instanță de joc: jsdom pentru DOM, petice pentru
+  canvas/audio/localStorage, apoi `import('../src/main.js')` — chiar codul
+  jocului, nu o felie de text extrasă din HTML.
+- `copil-joc.js` — pentru scenariile cu doi jucători (co-op), pornește
+  fiecare instanță în **procesul ei** (modulele ES se încarcă o singură dată
+  pe proces) și vorbește cu ea prin mesaje IPC (`eval`, `click`).
+- `window.__dbg` — o mică punte de test, definită permanent la finalul lui
+  `../src/game/sim.js` (funcții + getteri/setteri către starea jocului).
+  E adaos pur, nu schimbă comportamentul — dar fără ea testele n-ar avea cum
+  să ajungă la variabilele din interiorul modulelor.
 
 ## Ce verifică fiecare
 
@@ -31,12 +43,7 @@ npm run test:joc    # doar jocul rulat pe bune (~1,5 minute)
 | `etapa3-test.js` | cadourile de pe jos merg la nava care le-a atins | rapid |
 | `reconect-test.js` | conexiunea se reface singură când cade (pornește un server local) | ~25 s |
 | `smoke.js` | jocul chiar pornește și rulează, cu un singur jucător | ~20 s |
-| `coop-smoke.js` | două copii ale jocului + server local; tot co-op-ul pe viu | ~40 s |
-
-`smoke.js` și `coop-smoke.js` încarcă jocul întreg într-un DOM fals (jsdom), apasă
-butoanele și îl lasă să ruleze câteva secunde. Prind genul de eroare pe care testele pe
-stub-uri o ratează. `coop-smoke.js` injectează o punte spre interiorul codului **doar în
-copia din memorie** — fișierul de pe disc nu e atins.
+| `coop-smoke.js` | două instanțe reale ale jocului + server local; tot co-op-ul pe viu | ~40 s |
 
 ## Serverul de co-op
 
@@ -79,11 +86,10 @@ schimba ceva la co-op.
 
 ## La publicare
 
-Se modifică `../index.html`, iar versiunea se urcă în **două** locuri, care trebuie să
-rămână identice:
+Nu mai trebuie umblat manual la nicio versiune de cache: `npm run build`
+produce fișiere cu hash în nume (ex. `index-Ab12Cd.js`), iar service worker-ul
+(`src/sw.js`, construit de `vite-plugin-pwa`) își reconstruiește singur lista
+de precache la fiecare build și își curăță singur cache-urile vechi.
 
-- `../index.html` → `<div class="verTag">ki-vNN</div>`
-- `../sw.js` → `const C='ki-vNN';`
-
-Fără asta, telefoanele care au jocul instalat servesc mai departe versiunea din cache.
-Push pe `main` publică automat, prin `.github/workflows/pages.yml`.
+Push pe `main` publică automat pe GitHub Pages, prin `.github/workflows/pages.yml`
+(care rulează `npm run build` și publică `dist/`).
