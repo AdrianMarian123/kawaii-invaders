@@ -109,7 +109,8 @@ async function pornesteJocul(opt) {
   def('prompt', (...a) => (typeof w.prompt === 'function' ? w.prompt(...a) : null));
   // coopWake face fetch spre serverul de relay ca sa-l trezeasca — irelevant in teste
   def('fetch', () => Promise.resolve({ ok: true }));
-  // WebSocket ramane cel din Node (functioneaza cu serverul de relay real)
+  // WebSocket ramane cel din Node (functioneaza cu serverul de relay real).
+  // Global abia din Node 22 — de aceea workflow-urile ruleaza pe Node 22, nu 20.
 
   process.on('uncaughtException', e => erori.push('exceptie: ' + ((e && e.stack) || e)));
   process.on('unhandledRejection', e => erori.push('promisiune: ' + ((e && e.stack) || e)));

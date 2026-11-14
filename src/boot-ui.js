@@ -24,15 +24,6 @@
   }); }
   function lockLand(){ try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); }catch(e){} }
   lockLand(); window.addEventListener('click',lockLand,{once:true});
-  { let musToast=false;
-    const musOK=()=>{ const t=curTrack(); if(!musicOn)return true;
-      if(t&&(t.id in PROC_TRACKS)) return !!(actx&&actx.state==='running');
-      return !!(musAudio&&!musAudio.paused); };
-    const kick=()=>{ try{ audioInit(); if(actx&&actx.state==='suspended')actx.resume().catch(()=>{}); musApply();
-        if(musOK()){ if(musicOn&&!musToast){ musToast=true; try{toast('🎵 '+curTrack().n,'#c9a6ff');}catch(e){} }
-          window.removeEventListener('pointerdown',kick); window.removeEventListener('keydown',kick); window.removeEventListener('touchend',kick); }
-      }catch(e){} };
-    window.addEventListener('pointerdown',kick); window.addEventListener('keydown',kick); window.addEventListener('touchend',kick); }
   var dp=null, b=document.getElementById('installBtn');
   window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); dp=e; if(b)b.style.display='block'; });
   if(b)b.addEventListener('click',function(){ if(!dp)return; b.style.display='none'; dp.prompt(); dp.userChoice.finally(function(){ dp=null; }); });

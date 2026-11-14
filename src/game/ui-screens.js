@@ -1,19 +1,28 @@
 // Intrarea de la jucator (tastatura, touch, pointer) si cablarea tuturor
 // ecranelor de meniu: butoane, optiuni grafice, bestiar, medalii, co-op,
 // video-ul de intro. Ruleaza la incarcare si doar leaga handlere.
-import { audioInit, musNextTrack, musTogglePlay, snd, toggleMute } from './audio.js';
+import { audioInit, audioResume, musApply, musLevel, musNextTrack, musPlaying, musRelease, musTogglePlay, musTrackName, snd, toggleMute } from './audio.js';
 import { SPRITES, W, applyAspect, ctx, cv, setCtx, updateGfxUI } from './canvas.js';
-import { el, ui } from './utils.js';
+import { el, setOverDetails, ui } from './utils.js';
 import { closeShop, openShop } from './meta.js';
 import { setMenuTheme } from './menu-theme.js';
-import { refreshRelayUI, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
+import { getRelay, refreshRelayUI, relayIsSet, saveRelayFromField, showCoopIntro } from '../net/relay-config.js';
 import { BEAST, CRITCOL, WEAK, WEAPONS } from './config.js';
 import { drawCritter } from '../render/draw.js';
 import { ACHV, achv, runStats } from './achievements.js';
-import { activateBurst, coopReset, daily, fireMissile, netHost, netJoin, score, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
+import { activateBurst, coopReset, coopWake, daily, fireMissile, isGod, net, netHost, netJoin, score, setGod, skipWave, startGame, startStory, state, toMenu, toast, togglePause, wave } from './sim.js';
+import { maybeShow } from '../monetize/ads.js';
+
+// Cat o reclama e pe ecran butonul ramane apasabil: fara poarta, al doilea tap
+// ar porni actiunea de doua ori (doua meciuri, sau o a doua camera de co-op cu
+// alt cod decat cel deja trimis prietenului).
+function gate(fn){ let busy=false; return async(...a)=>{ if(busy)return; busy=true; try{ await fn(...a); }finally{ busy=false; } }; }
 
 //==================================================================
-const keys={}; let pointer={x:0,y:0,active:false};
+// Calculat local, nu importat: asa Vite il pliaza la minificare si tot blocul de
+// unelte de dezvoltare dispare din build-ul de release, nu doar ramane inactiv.
+const DEV_TOOLS = import.meta.env?.VITE_DEV_TOOLS === 'true';
+const keys={}; let pointer={x:0,y:0,active:false}; let godBuf='';
 addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k))e.preventDefault();
@@ -23,6 +32,17 @@ addEventListener('keydown',e=>{
   if(k==='c')activateBurst();
   if(k==='m')toggleMute();
   if(k==='enter'&&state==='menu')startStory(false);
+  // Unealta de dezvoltare: tastezi „god" si nu mai pierzi vieti, ca sa poti
+  // urmari nivelurile pana la capat. Nu exista buton pentru ea — pe telefon,
+  // fara tastatura, nu e accesibila. Scorul rundei nu se mai salveaza ca record.
+  // Uneltele de dezvoltare exista doar cu VITE_DEV_TOOLS=true; in release blocul
+  // asta nu face nimic, oricate taste s-ar apasa.
+  if(DEV_TOOLS){
+    if(k==='n'&&isGod()&&state==='playing')skipWave();   // „n" sare peste valul curent
+    if(k.length===1){ godBuf=(godBuf+k).slice(-3);
+      if(godBuf==='god'){ godBuf=''; const on=setGod(!isGod());
+        toast(on?'🛡️ GOD MODE pornit — scorul nu se salvează':'god mode oprit', on?'#ffe46b':'#8fd3ff'); } }
+  }
 });
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 cv.addEventListener('pointerdown',e=>{audioInit();pointer.active=true;ptr(e);});
@@ -34,6 +54,40 @@ el('coopBtn').onclick=()=>{audioInit();ui.menu.classList.add('hide');ui.coop.cla
 el('gfxBtn').onclick=()=>{audioInit();updateGfxUI();ui.menu.classList.add('hide');ui.opts.classList.remove('hide');};
 el('optsBack').onclick=()=>{ui.opts.classList.add('hide');ui.menu.classList.remove('hide');};
 { const b=el('shopBtn'); if(b)b.onclick=()=>openShop(); }
+// Chenarul panoului de muzică licăreşte pe beat şi îşi roteşte culoarea prin
+// albastru neon → mov → roz. Bucla merge doar cât panoul e deschis: închis,
+// nu are rost să calculăm nimic.
+{ const BEAT_COLS=[[56,232,255],[168,85,247],[255,111,176]];   // albastru neon, mov, roz
+  const panel=el('musPanel');
+  if(panel){
+    const tick=()=>{
+      requestAnimationFrame(tick);
+      // Nu ne uităm la clasa „hide": pe #musPanel ea n-a avut niciodată o regulă
+      // CSS (vezi .musPanel.hide mai jos, adăugată acum), iar cat bucla se oprea
+      // pe ea nu se executa nimic. document.hidden e verificarea care conteaza:
+      // aplicaţia în fundal nu are ce desena.
+      if(document.hidden) return;
+      const b=musLevel();
+      // culoarea se roteşte lent prin cele trei, independent de puls
+      const p=(performance.now()/2600)%1*BEAT_COLS.length;
+      const i=Math.floor(p), f=p-i;
+      const c1=BEAT_COLS[i%BEAT_COLS.length], c2=BEAT_COLS[(i+1)%BEAT_COLS.length];
+      const c=[0,1,2].map(k=>Math.round(c1[k]+(c2[k]-c1[k])*f));
+      panel.style.setProperty('--beat', b.toFixed(3));
+      panel.style.setProperty('--beatCol', 'rgb('+c[0]+','+c[1]+','+c[2]+')');
+    };
+    requestAnimationFrame(tick);
+  } }
+
+// Browserul refuză muzica până la primul gest al jucătorului: la fiecare
+// atingere/tastă o pornim, până când chiar sună. Înainte stătea în boot-ui.js,
+// unde după împărțirea pe module nu mai avea acces la player şi nu pornea nimic.
+{ let toasted=false;
+  const kick=()=>{ try{ audioInit(); audioResume(); musApply();
+      if(musPlaying()){ if(!toasted){ toasted=true; try{toast('🎵 '+musTrackName(),'#c9a6ff');}catch(e){} }
+        window.removeEventListener('pointerdown',kick); window.removeEventListener('keydown',kick); window.removeEventListener('touchend',kick); }
+    }catch(e){} };
+  window.addEventListener('pointerdown',kick); window.addEventListener('keydown',kick); window.addEventListener('touchend',kick); }
 { const d=el('musDockBtn'); if(d)d.onclick=()=>{ const p=el('musPanel'); if(p)p.classList.toggle('hide'); };
   const pv=el('musPrev'); if(pv)pv.onclick=()=>musNextTrack(-1);
   const nx=el('musNext'); if(nx)nx.onclick=()=>musNextTrack(1);
@@ -76,8 +130,30 @@ el('coopBack').onclick=()=>{coopReset();el('coopCode').style.display='none';show
 // ori de cate ori se deschide ecranul CO-OP, arata adresa salvata
 try{ new MutationObserver(()=>{ if(!ui.coop.classList.contains('hide')){ try{refreshRelayUI();}catch(e){} } })
       .observe(ui.coop, {attributes:true, attributeFilter:['class']}); }catch(e){}
-el('coopHost').onclick=()=>{audioInit();saveRelayFromField();netHost();};
-el('coopJoin').onclick=()=>{audioInit();saveRelayFromField();const code=(prompt('Introdu codul prietenului:')||'').trim().toUpperCase();if(code)netJoin(code);};
+// In co-op reclama vine o singura data, la intrare, si INAINTE de startRoom():
+// cat e pe ecran WebView-ul e in fundal, iar o conexiune deja deschisa s-ar
+// inchide. Asteptarea de dupa („cod gata · asteapta prietenul") absoarbe
+// natural diferenta de lungime dintre reclamele celor doua telefoane.
+//
+// Serverul de relay e pe plan gratuit si adoarme; trezirea poate lua 30+
+// secunde. O pornim INAINTE de reclama, ca sa se incalzeasca in timp ce
+// jucatorul se uita — altfel el ar astepta reclama PLUS trezirea, in loc de
+// maximul dintre ele. Daca adresa serverului nu e pusa, nu pornim niciun meci,
+// deci nici reclama: lasam startRoom() sa ceara adresa.
+const coopEnter=gate(async(code)=>{
+  audioInit();
+  saveRelayFromField();            // salveaza ce a tastat jucatorul, daca a tastat
+  // Adresa efectiva o cerem de la getRelay() (camp > localStorage > cea livrata),
+  // adica exact sursa pe care o foloseste si startRoom(). saveRelayFromField()
+  // intoarce doar continutul campului, completat de UI — deciziile de aici n-ar
+  // trebui sa atarne de starea unui input.
+  const relay=getRelay();
+  if(relayIsSet(relay)){ coopWake(relay); await maybeShow('co-op'); }
+  if(code===undefined)netHost(); else netJoin(code);
+});
+el('coopHost').onclick=()=>coopEnter();
+// codul se cere INAINTE de reclama: un prompt peste o reclama abia inchisa e confuz
+el('coopJoin').onclick=()=>{ const code=(prompt('Introdu codul prietenului:')||'').trim().toUpperCase(); if(code)coopEnter(code); };
 el('helpBtn').onclick=()=>{ try{audioInit();}catch(e){} ui.menu.classList.add('hide'); el('help').classList.remove('hide');
   try{ renderMedals(); buildBestiary(); }catch(e){ console.error('help:',e); } };
 { const b=el('helpBack'); if(b)b.onclick=()=>{ el('help').classList.add('hide'); ui.menu.classList.remove('hide'); }; }
@@ -101,25 +177,38 @@ function buildBestiary(){ const c=el('bestiary'); if(!c||c._built)return; c._bui
     c.appendChild(row);
   }
 }
-// --- intro video (with baked chiptune music), shown once before the menu ---
+// --- intro: logo-ul companiei, apoi trailerul jocului; se arata o data, inainte de meniu ---
+// Fisierele stau in public/video/ (copiate neschimbate in dist/), nu in sprites-data.js.
+const INTRO_VIDEOS=['video/cascride_interactive_studios_intro_720p.mp4','video/kawaii_invaders_intro_720p.mp4'];
 function initIntro(){
-  const data=window.__INTRO__, scr=el('introScreen'), vid=el('introVid'), bg=el('introBg'), hint=el('introSound'), skip=el('introSkip');
-  if(!data||!scr||!vid){ if(scr)scr.style.display='none'; return; }
-  let done=false;
+  const scr=el('introScreen'), vid=el('introVid'), bg=el('introBg'), hint=el('introSound'), skip=el('introSkip');
+  if(!scr||!vid){ if(scr)scr.style.display='none'; musRelease(); return; }
+  let done=false, idx=0, muted=false;
   const finish=()=>{ if(done)return; done=true; try{vid.pause(); if(bg)bg.pause();}catch(e){}
+    musRelease();
     scr.style.transition='opacity .5s'; scr.style.opacity='0';
     setTimeout(()=>{ scr.style.display='none'; try{vid.removeAttribute('src'); vid.load(); if(bg){bg.removeAttribute('src'); bg.load();}}catch(e){} },520); };
-  if(bg){ bg.src=data; bg.muted=true; bg.play().catch(()=>{}); }
-  vid.src=data; scr.style.display='flex'; vid.muted=true;
-  vid.play().then(()=>{ vid.muted=false; hint.style.display='none'; }).catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); });
-  const unmute=()=>{ vid.muted=false; hint.style.display='none'; };
+  const play=()=>{
+    if(idx>=INTRO_VIDEOS.length){ finish(); return; }
+    const src=INTRO_VIDEOS[idx];
+    if(bg){ bg.src=src; bg.muted=true; bg.play().catch(()=>{}); }
+    vid.src=src;
+    // Intai cu sunet (si ramane asa la al doilea video): in aplicatia Android (WebView) merge fara nicio atingere. Un browser
+    // il refuza pana la primul gest — atunci pornim mut si cerem o atingere.
+    vid.muted=muted;
+    vid.play().then(()=>{ if(!vid.muted)hint.style.display='none'; }).catch(()=>{ muted=true; vid.muted=true; hint.style.display=''; vid.play().catch(()=>{}); });
+  };
+  const next=()=>{ if(done)return; idx++; play(); };
+  scr.style.display='flex';
+  const unmute=()=>{ muted=false; vid.muted=false; hint.style.display='none'; };
   const onTap=e=>{ if(e&&e.target===skip)return; vid.play().catch(()=>{}); unmute(); };
   scr.addEventListener('pointerdown',onTap);
   scr.addEventListener('touchstart',onTap,{passive:true});
   scr.addEventListener('click',onTap);
   skip.addEventListener('click',e=>{ e.stopPropagation(); finish(); });
-  vid.addEventListener('ended',finish);
-  vid.addEventListener('error',finish);
+  vid.addEventListener('ended',next);
+  vid.addEventListener('error',next);
+  play();
 }
 initIntro();
 function renderMedals(){ const m=el('medals'); if(!m)return; const got=ACHV.filter(a=>achv[a.id]).length;
@@ -130,8 +219,17 @@ function renderMedals(){ const m=el('medals'); if(!m)return; const got=ACHV.filt
       +(on?'box-shadow:0 0 12px rgba(255,228,107,.4);':'filter:grayscale(1);opacity:.32;')+'">'+a.i+'</div>'; }).join(''); }
 el('storyGo').onclick=startGame;
 el('storyBack').onclick=()=>{ui.story.classList.add('hide');ui.menu.classList.remove('hide');};
-el('againBtn').onclick=startGame;
-el('menuBtn').onclick=toMenu;
+// O reclama per meci, dupa ce jucatorul si-a citit scorul. Ambele butoane o
+// arata: daca ar fi doar pe „Meniu", cine apasa mereu „Din nou" n-ar vedea
+// niciodata reclama. In co-op sarim — reclama de acolo e la intrare, iar aici ar
+// trimite WebView-ul in fundal cu conexiunea deschisa.
+// O SINGURA poarta pentru ambele butoane: cu una pe buton, „Din nou" urmat de
+// „Meniu" ar trece pe sub aceeasi reclama si ai ajunge in meniu dintr-un meci.
+const overGo=gate(async(go)=>{ if(net.mode==='off') await maybeShow('final-meci'); go(); });
+el('againBtn').onclick=()=>overGo(startGame);
+// „📊 detalii” arată/ascunde statisticile de pe ecranul de final
+{ const b=el('detailsBtn'); if(b)b.onclick=()=>setOverDetails(el('overDetails').hidden); }
+el('menuBtn').onclick=()=>overGo(toMenu);
 { const b=el('shareBtn'); if(b)b.onclick=()=>{
     const w=Math.max(runStats.maxWave,wave);
     const line=daily?('📅 Kawaii Invaders — provocarea zilei: '+score.toLocaleString()+' puncte, valul '+w+'! Poți mai mult?')
@@ -144,7 +242,9 @@ el('quitBtn').onclick=toMenu;
 el('resumeBtn').onclick=togglePause;
 el('pauseBtn').onclick=togglePause;
 el('muteBtn').onclick=toggleMute;
-el('btnMissile').onclick=fireMissile;
-el('btnBurst').onclick=activateBurst;
+// fără argument: onclick ar trimite evenimentul de click în locul navei (ship), iar racheta
+// ar scădea din „rachetele” click-ului, nu ale jucătorului
+el('btnMissile').onclick=()=>fireMissile();
+el('btnBurst').onclick=()=>activateBurst();
 
 export { keys, pointer };

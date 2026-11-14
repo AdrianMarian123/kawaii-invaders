@@ -151,21 +151,113 @@ Acesta e fișierul pe care îl încarci pe Play Console.
      nu există încă în proiect.
    - Capturi de ecran (minim 2, pe orizontală — jocul e landscape).
 5. **Chestionarul de clasificare a conținutului** (content rating) —
-   răspunde sincer; un shooter cute fără violență realistă, fără achiziții,
-   fără reclame, iese de obicei cu rating pentru toate vârstele sau apropiat.
-6. **Formularul "Data safety"** — jocul **nu colectează și nu partajează
-   date personale**. Singura comunicare de rețea e cu serverul de relay de
-   co-op (`kawaii-relay.onrender.com`), care transportă doar poziții și
-   acțiuni de joc (fără identitate, fără date personale) — menționează asta
-   dacă formularul întreabă despre comunicare în rețea.
-7. **Content → App content**: declară că nu ai reclame, nu ai achiziții din
-   aplicație (confirmat: jocul rămâne gratuit, fără monetizare).
+   răspunde sincer. Jocul e un shooter cute fără violență realistă, dar
+   **are reclame și achiziții din aplicație** — ambele trebuie declarate aici.
+   Declarația greșită e motiv de suspendare, nu doar de respingere.
+6. **Formularul "Data safety"** — jocul în sine nu colectează date personale,
+   dar **SDK-urile de monetizare o fac**, și asta trebuie declarat:
+   - **AdMob** colectează **ID-ul de publicitate** (Advertising ID) și date
+     aproximative de utilizare, pentru reclame. Permisiunea
+     `com.google.android.gms.permission.AD_ID` e adăugată automat de SDK în
+     manifest — o vezi în manifestul final după build.
+   - **RevenueCat** procesează istoricul de cumpărături și un identificator de
+     utilizator anonim.
+   - Codul propriu al jocului: singura comunicare e cu serverul de relay de
+     co-op (`kawaii-relay.onrender.com`), care transportă doar poziții și
+     acțiuni de joc, fără identitate și fără date personale.
+
+   Google publică liste oficiale „Data safety" pentru ambele SDK-uri — ia
+   răspunsurile de acolo, nu din memorie, fiindcă se schimbă.
+7. **Content → App content**: declară **că ai reclame** („Ads" → Yes) și
+   **achiziții din aplicație**. La secțiunea de public țintă, dacă marchezi
+   jocul ca fiind (și) pentru copii, intri sub politica *Families* — acolo
+   reclamele trebuie servite din rețele certificate pentru familii și
+   interstitialele au reguli în plus. Un joc „kawaii" e ușor citit ca fiind
+   pentru copii, deci citește politica înainte de a răspunde.
 8. **Upload**: la secțiunea "Testare" → "Testare internă" (Internal testing),
    creează o versiune și încarcă `app-release.aab`. Testează cu propriul cont
    Google înainte să treci la producție.
 9. Când ești mulțumit, promovează versiunea din "Testare internă" spre
    "Producție" (Production) — Google mai face o rundă de verificare
    (de obicei ore, uneori 1-2 zile pentru aplicații noi).
+
+## 5b. Monetizare: reclame (AdMob + UMP) și cumpărături (RevenueCat)
+
+Toată configurarea trece prin **un singur fișier: `.env`** (gitignorat).
+Pornește de la `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Valorile implicite sunt **ID-urile de test ale Google**, deci jocul merge
+imediat, fără cont AdMob. Nu testa niciodată pe ID-urile reale: e fraudă de
+clicuri și îți poate suspenda contul.
+
+### Unde apar reclamele
+
+| Mod | Când | De ce acolo |
+|---|---|---|
+| Solo | La sfârșitul fiecărui meci, pe „Din nou" **și** pe „Meniu" | După ce jucătorul și-a văzut scorul. Dacă ar fi doar pe „Meniu", cine apasă mereu „Din nou" n-ar vedea niciodată reclamă. |
+| Co-op | O dată, la intrarea în co-op, **înainte** de conectare | Nu la conectare: acolo cele două telefoane ar sta în reclame de lungimi diferite, gazda ar porni meciul singură, iar conexiunea proaspătă s-ar închide cu WebView-ul în fundal. |
+
+Pauza minimă dintre reclame se reglează din `.env`
+(`VITE_ADS_MIN_INTERVAL_S`, implicit `0` = la fiecare meci), fără să umbli
+în cod.
+
+### AdMob — pași
+
+1. Creează aplicația în [AdMob](https://apps.admob.com) și o unitate de
+   reclamă de tip **Interstitial**.
+2. Pune în `.env`: `VITE_ADMOB_APP_ID` și `VITE_ADMOB_INTERSTITIAL_ID`.
+3. `npm run sync:android` — duce App ID-ul în `AndroidManifest.xml`.
+   JS-ul nu poate scrie în manifest, iar fără acel `<meta-data>` SDK-ul AdMob
+   **crapă la pornirea aplicației**. De asta există pasul.
+4. Abia la build-ul de release: `VITE_ADMOB_TESTING=false`.
+
+### UMP (consimțământ) — nu are nimic de pus în `.env`
+
+Formularul, textele și lista de parteneri se configurează în **AdMob →
+Privacy & messaging**. Codul doar îl cere la pornire. Dacă jucătorul e în
+SEE/UK și nu dă consimțământ, jocul trece automat pe reclame
+nepersonalizate — altfel ar fi încălcare de politică, nu doar venit mai mic.
+
+### RevenueCat + Play Console — pași
+
+1. În **Play Console → Monetize → Products → In-app products**, creează un
+   produs pentru fiecare `id` din [`src/monetize/catalog.js`](src/monetize/catalog.js).
+   Tipul trebuie să se potrivească cu `repeatable`:
+   - `repeatable: false` → **non-consumable** (fără reclame, skin-uri)
+   - `repeatable: true` → **consumable** (monede, gemuri)
+2. În RevenueCat: creează proiectul, leagă-l la Play Console (are nevoie de un
+   **service account** Google Play — cheia aceea stă **doar** în RevenueCat,
+   niciodată în `.env` sau în cod), apoi importă produsele.
+   Marchează consumabilele ca *consumable* — altfel SDK-ul nu le consumă la
+   Google și jucătorul nu le mai poate cumpăra a doua oară.
+3. Pentru non-consumabile, creează câte un *entitlement* cu numele din câmpul
+   `entitlement` al produsului.
+4. Pune cheia **publică** de SDK pentru Android (începe cu `goog_`) în
+   `.env`, la `VITE_REVENUECAT_API_KEY`. Cheia secretă (`sk_...`) nu intră
+   niciodată în client.
+
+Tabul **„💳 Magazin"** apare în shop-ul jocului doar când Billing e configurat
+și Google a întors prețuri. Prețurile sunt mereu cele de la Google, în moneda
+jucătorului — niciodată scrise în cod.
+
+### Ce e secret și ce nu
+
+`.env` **nu e un loc pentru secrete.** Vite inline-uiește orice variabilă
+`VITE_*` în bundle, deci tot ce pui acolo ajunge în `dist/` și în APK, unde
+oricine îl poate extrage și citi.
+
+| Valoare | Secret? | Unde stă |
+|---|---|---|
+| ID-uri AdMob (app, unitate) | nu | `.env` |
+| ID-uri de produs (SKU) | nu | `src/monetize/catalog.js` |
+| Cheia publică RevenueCat (`goog_`) | nu | `.env` |
+| Cheia secretă RevenueCat (`sk_`) | **da** | doar pe server |
+| Service account Google Play (JSON) | **da** | doar în RevenueCat / pe server |
+| Keystore-ul de semnare | **da** | doar local, vezi pasul 2 |
 
 ## 6. Versiuni ulterioare
 
@@ -174,7 +266,8 @@ De fiecare dată când modifici jocul și vrei o versiune nouă pe Play Store:
 1. Crește numărul de versiune în `android/app/build.gradle`
    (`versionCode` — un întreg care trebuie să crească mereu; `versionName`
    — textul vizibil, ex. „1.1”).
-2. `npm run build && npx cap sync android`
+2. `npm run build:android` (face build-ul web, scrie App ID-ul AdMob din
+   `.env` în `android/admob.properties` și rulează `cap sync`)
 3. `cd android && .\gradlew.bat bundleRelease`
 4. Încarcă noul `.aab` în Play Console, într-o "Testare internă" nouă sau
    direct în producție.

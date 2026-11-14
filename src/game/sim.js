@@ -7,7 +7,7 @@ import { keys, pointer } from './ui-screens.js';
 
 import { myScore, updateHUD } from './hud.js';
 
-import { boltSpr, candySpr, draw, drawCritter, hexA, lightenHex, rr, shade, shatterBubble, shipSkinCanvas, ufoBreak } from '../render/draw.js';
+import { boltSpr, candySpr, draw, drawCritter, drawP2, hexA, lightenHex, rr, shade, shatterBubble, shipSkinCanvas, ufoBreak } from '../render/draw.js';
 
 import { getRelay, normRelay, refreshRelayUI, relayHint, relayIsSet, saveRelayFromField, setRelay, showCoopIntro, showRelayBox } from '../net/relay-config.js';
 
@@ -19,9 +19,9 @@ import { addCoins, addGems, applyTheme, checkDailyLogin, closeShop, coins, critC
 
 import { audioInit, musApply, musNextTrack, musTogglePlay, snd, toggleMute, tone } from './audio.js';
 
-import { GS, H, SPRITES, W, applyAspect, bgImg, ctx, cv, gctx, gcv, setCtx, sprite, updateGfxUI } from './canvas.js';
+import { GS, H, SPRITES, W, applyAspect, bgImg, ctx, cv, gctx, gcv, setCtx, updateGfxUI } from './canvas.js';
 
-import { TAU, clamp, dist2, el, hooks, lerp, rand, randi, ui } from './utils.js';
+import { TAU, clamp, dist2, el, hooks, lerp, rand, randi, setOverDetails, ui } from './utils.js';
 
 import { BEAST, BOSS_NAME, CRITCOL, CRITTERS, EVENT_NAME, LCOLS, SECTORS, STORY, WEAK, WEAPONS, XCOLS } from './config.js';
 
@@ -34,6 +34,25 @@ import { BEAST, BOSS_NAME, CRITCOL, CRITTERS, EVENT_NAME, LCOLS, SECTORS, STORY,
 // STATE
 //==================================================================
 let state='menu';
+// God mode: unealta de dezvoltare, fara niciun buton in interfata. Se aprinde
+// tastand „god" (vezi ui-screens.js).
+//
+// Exista DOAR cand VITE_DEV_TOOLS=true in .env. In build-ul de release flagul e
+// fals, deci nicio tasta nu o poate porni — nu e doar ascunsa, e inchisa. Altfel
+// un jucator pe web, cu tastatura, ar fi dat peste ea.
+//
+// Nu se salveaza nicaieri: la repornirea jocului e iar stinsa. godRun tine minte
+// ca a fost pornita in runda curenta, ca sa nu-i stricam jucatorului recordul cu
+// o rulare in care era invincibil.
+const DEV_TOOLS = import.meta.env?.VITE_DEV_TOOLS === 'true';
+let godMode=false, godRun=false;
+function setGod(on){ if(!DEV_TOOLS)return false; godMode=!!on; if(godMode)godRun=true; return godMode; }
+function isGod(){ return godMode; }
+// Sare peste valul curent. Golim inamicii si coada de aparitii, apoi lasam
+// logica normala de „val terminat" sa ruleze — asa primim si perk-urile, si
+// calatoria dintre planete, fara sa dublam progresia aici.
+function skipWave(){ if(!DEV_TOOLS||!godMode)return;
+  enemies.length=0; eBullets.length=0; spawnQ.length=0; bonusMode=false; }
 let score=0, best=0; try{best=Number(localStorage.getItem('ki_best')||0);}catch(e){}
 let bestHc=0; try{bestHc=Number(localStorage.getItem('ki_best_hc')||0);}catch(e){}
 let hardcore=false, scoreMul=1, fireFreqMul=1;
@@ -94,6 +113,7 @@ function initBg(){
   ambient=[]; for(let i=0;i<28;i++)ambient.push({x:rand(0,W),y:rand(0,H),v:rand(18,55),sw:rand(0,TAU),swA:rand(8,26),rot:rand(0,TAU),vr:rand(-2,2),s:rand(1.5,3.8)});
 }
 initBg(); hooks.initBg=initBg; addEventListener('resize',initBg);
+const MISSILE_MAX=9;   // ajusteaza de aici daca vrei mai multe/mai putine
 function sector(){return SECTORS[Math.floor((Math.max(1,wave)-1)/10)%SECTORS.length];}
 function nextSectorName(){ const w=wave+1; return SECTORS[Math.floor((Math.max(1,w)-1)/10)%SECTORS.length].name; }
 function sectorIndex(){return Math.floor((Math.max(1,wave)-1)/10)%SECTORS.length;}
@@ -116,7 +136,7 @@ function startStory(autoStart){
   typeLine();
 }
 function startGame(){
-  audioInit();
+  audioInit(); runBanked=false;
   scoreMul=hardcore?3:1; fireFreqMul=hardcore?0.55:1;
   if(daily){let s=(dailySeed||1)>>>0;Math.random=function(){s=(s*1664525+1013904223)>>>0;return s/4294967296;};}else{Math.random=_origRandom;}
   score=0;wave=0;waveActive=false;betweenT=0;spawnQ=[];spawnIx=0;combo=0;comboT=0;mult=1;warpT=0;traveling=false;raidMode=false;travelMap=null;runAchvNew=[];formBag=[];
@@ -133,34 +153,41 @@ function startGame(){
   ['menu','story','over','pause','coop','opts'].forEach(s=>ui[s].classList.add('hide'));
   { const pb=el('perkBox'); if(pb)pb.style.display='none'; }
   ui.touchpad.style.display='flex';
-  state='playing'; nextWave(); updateHUD();
-  if(!daily&&!hardcore){ setTimeout(()=>toast('👆 Ține apăsat oriunde ca să miști nava','#8fd3ff'),700); setTimeout(()=>toast('✨ Tragi automat — distruge inamicii!','#ffe46b'),3300); setTimeout(()=>toast('🚀🔥 Butoanele din dreapta = arme speciale','#ff8fc7'),5900); setTimeout(()=>toast('⭐ Adună stele și bomboane','#7ef9d2'),8500); }
+  godRun=godMode; state='playing'; nextWave(); updateHUD();
+  if(!daily&&!hardcore){ setTimeout(()=>toast('👆 Ține apăsat oriunde ca să miști nava','#8fd3ff'),700); setTimeout(()=>toast('✨ Tragi automat — distruge inamicii!','#ffe46b'),3300); setTimeout(()=>toast('🚀🔥 Butoanele din stânga = arme speciale','#ff8fc7'),5900); setTimeout(()=>toast('⭐ Adună stele și bomboane','#7ef9d2'),8500); }
   if(hardcore)setTimeout(()=>toast('💀 HARDCORE · scor ×3','#ff5a6a'),400);
   if(daily){ setTimeout(()=>toast('📅 PROVOCAREA ZILEI · '+selectedShip.n,'#8fd3ff'),400);
     if(dailyMod&&dailyMod.id!=='none')setTimeout(()=>toast('🎲 '+dailyMod.n+' — '+dailyMod.d,'#ffd24a'),1400); }
 }
-function toMenu(){ coopReset(); el('overTitle').textContent='GAME OVER'; state='menu'; ['story','over','pause','coop','opts','shop','dailyReward','help'].forEach(s=>{const e=el(s);if(e)e.classList.add('hide');});
+function toMenu(){ if(net.mode!=='guest'&&(state==='playing'||state==='paused'||state==='perk'))bankRun(); coopReset(); el('overTitle').textContent='GAME OVER'; state='menu'; ['story','over','pause','coop','opts','shop','dailyReward','help'].forEach(s=>{const e=el(s);if(e)e.classList.add('hide');});
   ui.menu.classList.remove('hide'); ui.touchpad.style.display='none'; if(el('coopCode'))el('coopCode').style.display='none'; renderDaily(); updateCoinUI(); }
+// Monedele şi diamantele culese în rundă intră în pungă o singură dată: la
+// final sau când ieşi în meniu în mijlocul rundei (altfel se pierdeau).
+// În co-op fiecare pleacă acasă doar cu ce a cules el; Ploaie de Aur le dublează.
+let runBanked=true;
+function bankRun(){ if(runBanked)return; runBanked=true;
+  const _mine=(net.mode!=='off'&&p2.active)?(player.coins|0):(runStats.coins|0);
+  if(_mine>0){ let gain=_mine; if(daily&&dailyMod&&dailyMod.id==='rich')gain*=2; addCoins(gain); }
+  const _myGems=(net.mode!=='off'&&p2.active)?(player.gems|0):(runStats.gems|0);
+  if(_myGems>0){ addGems(_myGems); } }
 function gameOver(){ state='over';
+  try{ setOverDetails(false); }catch(e){}
   ui.over.classList.remove('hide'); ui.touchpad.style.display='none';   // afișează imediat — fără freeze chiar dacă statisticile aruncă
   try{
-  if(net.mode==='host')netSend({t:'over',sc:score,sc1:p2.score|0,sc2:player.score|0,co:p2.coins|0,co2:player.coins|0});
+  if(net.mode==='host')netSend({t:'over',sc:score,sc1:p2.score|0,sc2:player.score|0,co:p2.coins|0,co2:player.coins|0,gm:p2.gems|0});
   ui.finalScore.textContent=score.toLocaleString();
   el('oWave').textContent=Math.max(runStats.maxWave,wave); el('oKills').textContent=runStats.kills;
   el('oCombo').textContent='x'+(runStats.maxMult||1); el('oCoins').textContent=runStats.coins;
   el('oMissiles').textContent=runStats.missiles; el('oBoss').textContent=runStats.bossKills;
   showCoopSplit(player.score|0, p2.score|0, player.coins|0, p2.coins|0);
   Math.random=_origRandom;
-  // bank the coins collected this run (Ploaie de Aur doubles them) + evaluate daily missions
-  // în co-op fiecare pleacă acasă doar cu ce a cules el
-  const _mine=(net.mode!=='off'&&p2.active)?(player.coins|0):(runStats.coins|0);
-  if(_mine>0){ let gain=_mine; if(daily&&dailyMod&&dailyMod.id==='rich')gain*=2; addCoins(gain); }
-  if(runStats.gems>0){ addGems(runStats.gems); }
+  bankRun();   // + evaluate daily missions
   evalMissions();
   if(daily){ dailyMeta.best=Math.max(dailyMeta.best||0,score); saveDaily(); }
   const _bk=hardcore?'ki_best_hc':'ki_best'; const _bv=hardcore?bestHc:best;
   const _my=myScore();                     // în co-op recordul e partea TA, ca să rămână comparabil cu solo
   if(daily){ ui.bestLine.textContent='📅 provocarea zilnică · '+score.toLocaleString(); }
+  else if(godRun){ ui.bestLine.textContent='🛡️ god mode — scorul nu se salvează'; }
   else if(_my>_bv){ if(hardcore)bestHc=_my; else best=_my; try{localStorage.setItem(_bk,_my);}catch(e){} ui.bestLine.textContent=(hardcore?'💀 record nou hardcore!':'✨ record nou!');}
   else ui.bestLine.textContent='cel mai bun'+(hardcore?' (hardcore)':'')+': '+_bv.toLocaleString();
   // newly earned achievements this run (so feedback shows regardless of ship/run)
@@ -173,18 +200,24 @@ function togglePause(){ if(state==='playing'){state='paused';
     ui.pause.classList.remove('hide');}
   else if(state==='paused'){state='playing';ui.pause.classList.add('hide');} }
 
+// `ok` se uita la nava gazdei (ea alege), dar `go` primeste nava pe care o
+// modifica, pentru ca in co-op upgrade-ul e al echipei. Plafoanele sunt in `go`,
+// nu doar in `ok`, ca sa nu depaseasca a doua nava limita primeia.
 const PERKS=[
-  {id:'fire',ic:'⚡',n:'Foc rapid',d:'+20% viteză de tragere',ok:()=>player.fireMul>0.45,go:()=>{player.fireMul*=0.82;}},
-  {id:'dmg',ic:'💥',n:'Daune mărite',d:'+30% daune la tot',ok:()=>player.dmgMul<3.2,go:()=>{player.dmgMul*=1.3;}},
-  {id:'wing',ic:'🐶',n:'Coleg nou',d:'încă o pisicuță ajutor',ok:()=>player.wingmen<2,go:()=>{player.wingmen=Math.min(2,player.wingmen+1);}},
-  {id:'spd',ic:'🏃',n:'Viteză',d:'+20% viteză de mișcare',ok:()=>(player.spdMul||1)<1.8,go:()=>{player.spdMul*=1.2;}},
-  {id:'life',ic:'❤️',n:'Viață în plus',d:'+1 viață (max 6)',ok:()=>player.lives<6,go:()=>{player.lives++;updateHUD();}},
-  {id:'pierce',ic:'🎯',n:'Perforare',d:'gloanțele trec prin +1 inamic',ok:()=>player.pierce<3,go:()=>{player.pierce++;}},
-  {id:'guard',ic:'😇',n:'Înger păzitor',d:'absoarbe o lovitură fără pierdere',ok:()=>(player.guard||0)<3,go:()=>{player.guard=(player.guard||0)+1;}},
-  {id:'big',ic:'🔵',n:'Gloanțe mari',d:'gloanțe mai mari, lovești mai ușor',ok:()=>(player.bulletR||0)<6,go:()=>{player.bulletR=(player.bulletR||0)+2;}},
-  {id:'ammo',ic:'🚀',n:'Muniție',d:'+2 rachete acum',ok:()=>true,go:()=>{player.missiles+=2;updateHUD();}},
-  {id:'burstp',ic:'🔥',n:'Burst extra',d:'+1 încărcătură burst',ok:()=>player.burst<4,go:()=>{player.burst=Math.min(4,player.burst+1);updateHUD();}},
+  {id:'fire',ic:'⚡',n:'Foc rapid',d:'+20% viteză de tragere',ok:()=>player.fireMul>0.45,go:s=>{s.fireMul=Math.max(0.45,s.fireMul*0.82);}},
+  {id:'dmg',ic:'💥',n:'Daune mărite',d:'+30% daune la tot',ok:()=>player.dmgMul<3.2,go:s=>{s.dmgMul=Math.min(3.2,s.dmgMul*1.3);}},
+  {id:'wing',ic:'🐶',n:'Coleg nou',d:'încă o pisicuță ajutor',ok:()=>player.wingmen<2,go:s=>{s.wingmen=Math.min(2,(s.wingmen||0)+1);}},
+  {id:'spd',ic:'🏃',n:'Viteză',d:'+20% viteză de mișcare',ok:()=>(player.spdMul||1)<1.8,go:s=>{s.spdMul=Math.min(1.8,(s.spdMul||1)*1.2);}},
+  {id:'life',ic:'❤️',n:'Viață în plus',d:'+1 viață (max 6)',ok:()=>player.lives<6,go:s=>{if(s.lives<6)s.lives++;updateHUD();}},
+  {id:'pierce',ic:'🎯',n:'Perforare',d:'gloanțele trec prin +1 inamic',ok:()=>player.pierce<3,go:s=>{s.pierce=Math.min(3,(s.pierce||0)+1);}},
+  {id:'guard',ic:'😇',n:'Înger păzitor',d:'absoarbe o lovitură fără pierdere',ok:()=>(player.guard||0)<3,go:s=>{s.guard=Math.min(3,(s.guard||0)+1);}},
+  {id:'big',ic:'🔵',n:'Gloanțe mari',d:'gloanțe mai mari, lovești mai ușor',ok:()=>(player.bulletR||0)<6,go:s=>{s.bulletR=Math.min(6,(s.bulletR||0)+2);}},
+  {id:'ammo',ic:'🚀',n:'Muniție',d:'+2 rachete acum',ok:()=>player.missiles<MISSILE_MAX,go:s=>{s.missiles=Math.min(MISSILE_MAX,s.missiles+2);updateHUD();}},
+  {id:'burstp',ic:'🔥',n:'Burst extra',d:'+1 încărcătură burst',ok:()=>player.burst<4,go:s=>{s.burst=Math.min(4,(s.burst||0)+1);updateHUD();}},
 ];
+// Navele care primesc upgrade-ul. In co-op si oaspetele, chiar daca tocmai e
+// doborat: reapare peste o secunda si ar fi nedrept sa piarda tocmai boss-ul.
+function perkShips(){ return (net.mode!=='off'&&p2.active) ? [player,p2] : [player]; }
 const SHIPS=[
   {id:'mochi',ic:'🐱',n:'Mochi-1',d:'echilibrată, bună pentru oricine',col:null,go:(p)=>{}},
   {id:'bolt',ic:'⚡',n:'Fulger',d:'foc & viteză mari, dar doar 2 vieți',col:'#ffe24a',go:(p)=>{p.fireMul=0.7;p.spdMul=1.3;p.lives=2;}},
@@ -219,7 +252,7 @@ function showPerks(){
     c.onclick=()=>choosePerk(p); box.appendChild(c); }
   el('perkBox').style.display='flex'; state='perk'; if(snd.pickup)snd.pickup();
 }
-function choosePerk(p){ p.go(); player.perks.push(p.id); el('perkBox').style.display='none'; state='playing'; toast(p.ic+' '+p.n,'#ffe46b'); }
+function choosePerk(p){ for(const s of perkShips()) p.go(s); player.perks.push(p.id); el('perkBox').style.display='none'; state='playing'; toast(p.ic+' '+p.n,'#ffe46b'); }
 
 function nextWave(){
   traveling=false; raidMode=false; travelMap=null;
@@ -825,7 +858,7 @@ function updateLaser(ship,dt){
   if(wl>=6)xs=[ship.x-sp*1.4,ship.x,ship.x+sp*1.4];
   if(wl>=8)xs=[ship.x-sp*2,ship.x-sp*0.7,ship.x+sp*0.7,ship.x+sp*2];
   for(let i=0;i<(ship.wingmen||0);i++)xs.push(ship.x+(i===0?-44:44));
-  for(const bx of xs){ beams.push({x:bx,dps,w:bw});
+  for(const bx of xs){ beams.push({x:bx,y:ship.y-ship.r,dps,w:bw});
     for(const e of enemies){ if(!e.dead&&Math.abs(e.x-bx)<e.r+bw*0.6&&e.y<ship.y) damageEnemy(e,dps*dt,e.x,e.y-e.r,'laser',ship); } }
   if(Math.random()<0.4)snd.zap();
 }
@@ -872,7 +905,7 @@ function collect(p,ship){
     if(ship.weapon===w)ship.lvl[w]=Math.min(9,ship.lvl[w]+1);
     else{ if(ship.lvl[w]===0)ship.lvl[w]=Math.max(1,Math.min(ship.lvl[ship.weapon]||1,3)); ship.weapon=w; }
     floater(p.x,p.y,WEAPONS[w].name+' '+ship.lvl[w],WEAPONS[w].color); toast(who+WEAPONS[w].name.toUpperCase()+' lvl '+ship.lvl[w],WEAPONS[w].color); snd.pickup();
-  } else if(p.type==='missile'){ship.missiles+=2;floater(p.x,p.y,'+2 🚀','#8fd3ff');snd.pickup();}
+  } else if(p.type==='missile'){ if(ship.missiles<MISSILE_MAX){ship.missiles=Math.min(MISSILE_MAX,ship.missiles+2);floater(p.x,p.y,'+2 🚀','#8fd3ff');} else{pts_(500);floater(p.x,p.y,'+500','#ffe46b');} snd.pickup();}
   else if(p.type==='burst'){ if(ship.burst<3){ship.burst++;floater(p.x,p.y,'+1 🔥','#ff8a3b');} else{pts_(500);floater(p.x,p.y,'+500','#ffe46b');} snd.pickup(); }
   else if(p.type==='shield'){ship.shield=9;floater(p.x,p.y,'scut!','#7ef9d2');toast(who+'SCUT ACTIV','#7ef9d2');snd.pickup();}
   else if(p.type==='magnet'){ship.magnet=9;floater(p.x,p.y,'magnet!','#ff8fc7');toast(who+'MAGNET ACTIV 🧲','#ff8fc7');snd.pickup();}
@@ -880,7 +913,7 @@ function collect(p,ship){
   else if(p.type==='life'){ if(ship.lives<6){ship.lives++;floater(p.x,p.y,'+1 💗','#ff8fc7');toast(who+'VIAȚĂ EXTRA 💗','#ff8fc7');} else{pts_(1500);floater(p.x,p.y,'+1500','#ffe46b');} snd.pickup(); }
   else if(p.type==='coin'){ addCombo(); const T=COIN_TIERS[p.tier||0]; runStats.coins+=(T.cur||1); ship.coins=(ship.coins||0)+(T.cur||1);
     const pts=Math.round(rand(T.pts[0],T.pts[1])*scoreNow()); pts_(pts);
-    if(T.gem){ runStats.gems=(runStats.gems||0)+T.gem; }
+    if(T.gem){ runStats.gems=(runStats.gems||0)+T.gem; ship.gems=(ship.gems||0)+T.gem; }
     if((p.tier||0)===3){ floater(p.x,p.y-6,'💎 +'+T.cur+' 🪙',T.col); confetti(p.x,p.y); boom(p.x,p.y,16,T.col); toast(who+'💎 DIAMANT! +'+T.cur+' monede','#9fe9ff'); }
     else floater(p.x,p.y,'+'+pts,T.col);
     snd.coin(); }
@@ -940,6 +973,7 @@ function confetti(x,y){ const cols=['#ff8fc7','#ffe46b','#8fd3ff','#c89bff','#7e
   for(let i=0;i<60;i++)particles.push(part(x,y,rand(0,TAU),rand(120,420),cols[randi(0,4)],rand(.6,1.3),rand(2,5))); }
 function part(x,y,a,sp,color,life,r){return {x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,color,life,max:life,r:r||3};}
 function hitPlayer(){
+  if(godMode)return;
   if(player.invuln>0||player.dead)return;
   if(player.shield>0){player.shield=0;player.invuln=1.2;floater(player.x,player.y-26,'scut spart','#7ef9d2');shake(10,.3);snd.hurt();return;}
   if((player.guard||0)>0){player.guard--;player.invuln=1.6;floater(player.x,player.y-26,'😇 păzit!','#ffe46b');shake(10,.3);snd.hurt();updateHUD();return;}
@@ -1075,7 +1109,8 @@ function startRoom(code,asHost){
 
 // Serverul e pe un plan gratuit și adoarme; un GET simplu îl trezește mai repede
 // decât o cerere de WebSocket care expiră.
-function coopWake(url){ try{ fetch(String(url).replace(/^ws/,'http'),{mode:'no-cors',cache:'no-store'}); }catch(e){} }
+// doar o trezire: daca cererea esueaza (fara internet, server cazut) nu conteaza — nu aratam nicio eroare
+function coopWake(url){ try{ fetch(String(url).replace(/^ws/,'http'),{mode:'no-cors',cache:'no-store'}).catch(()=>{}); }catch(e){} }
 
 function coopOpen(){
   if(net.stopped||!net.room)return;
@@ -1131,9 +1166,12 @@ try{ document.addEventListener('visibilitychange', ()=>{
 function showCoopSplit(sMine,sHis,cMine,cHis){ const cs=el('coopSplit'); if(!cs)return;
   const on=(net.mode!=='off'&&p2.active);
   cs.style.display=on?'flex':'none';
+  // randul scurt 💗/💙 sta langa scorul final, deasupra butoanelor: se vede fara „📊 detalii"
+  const duo=el('overDuo'); if(duo)duo.style.display=on?'flex':'none';
   if(!on)return;
   const put=(id,v)=>{ const n=el(id); if(n)n.textContent=(v|0).toLocaleString(); };
-  put('oScoreMe',sMine); put('oScoreHim',sHis); put('oCoinsMe',cMine); put('oCoinsHim',cHis); }
+  put('oScoreMe',sMine); put('oScoreHim',sHis); put('oDuoMe',sMine); put('oDuoHim',sHis);
+  put('oCoinsMe',cMine); put('oCoinsHim',cHis); }
 function netHost(){ startRoom(shortId(),true); }
 function netJoin(code){ startRoom(code,false); }
 function netSend(o){ if(net.ws&&net.ws.readyState===1){ if(net.ws.bufferedAmount>180000)return;
@@ -1146,7 +1184,9 @@ function onNetData(m){ if(!m)return;
     if(m.t==='s')applySnapshot(m);
     else if(m.t==='over'){ score=m.sc; state='over';
       if(m.sc1!==undefined)player.score=m.sc1|0; if(m.sc2!==undefined)p2.score=m.sc2|0;
-      if(m.co){ runStats.coins=(m.co|0)+(m.co2|0); addCoins(m.co|0); } ['menu','story','coop','opts','pause'].forEach(s=>ui[s].classList.add('hide'));
+      if(m.co){ runStats.coins=(m.co|0)+(m.co2|0); addCoins(m.co|0); }
+      if(m.gm){ addGems(m.gm|0); }   // diamantele oaspetelui, pe care gazda i le trimite ['menu','story','coop','opts','pause'].forEach(s=>ui[s].classList.add('hide'));
+      try{ setOverDetails(false); }catch(e){}
       ui.over.classList.remove('hide'); ui.finalScore.textContent=score.toLocaleString(); el('overTitle').textContent='CO-OP TERMINAT';
       el('oWave').textContent=Math.max(runStats.maxWave,wave); el('oKills').textContent=runStats.kills;
       el('oCombo').textContent='x'+(runStats.maxMult||1); el('oCoins').textContent=runStats.coins;
@@ -1168,12 +1208,26 @@ function netSnapshot(){
       if(e.leaf){ if(e.lcol)o.lc=e.lcol; if(e.face!==undefined)o.fc=e.face|0; } }
     return o; });
   const eb=eBullets.slice(0,90).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||7)/ih),c:b.color||'#ffd1f0',k:b.bk||'drop'}));
-  const pb=bullets.slice(0,40).map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
+  // Gloantele: pana la 40 pentru FIECARE nava. Inainte plecau doar primele 40 (cele mai vechi, cele
+  // mai de sus), iar oaspetele nu vedea nimic iesind din nave cat timp gazda tragea mult. Alegerea
+  // dupa id e stabila: acelasi glont ramane ales de la un instantaneu la altul, deci nu palpaie.
+  const pickB=(list)=>{ const k=Math.ceil(list.length/40)||1; return list.filter(b=>NID(b)%k===0).slice(0,40); };
+  const pb=[...pickB(bullets.filter(b=>b.own!==p2)),...pickB(bullets.filter(b=>b.own===p2))]
+    .map(b=>({i:NID(b),x:P((b.x||0)/iw),y:P((b.y||0)/ih),r:P((b.r||4)/ih),c:b.color||'#ffffff',ty:b.type||'b'}));
   const pk=pickups.slice(0,24).map(p=>({i:NID(p),x:P((p.x||0)/iw),y:P((p.y||0)/ih),ty:p.type||'coin',
     tr:p.tier||0, w:p.weapon||0}));
+  // fasciculele de laser sunt efemere (se refac in fiecare cadru): fara ele in
+  // instantaneu, oaspetele nu vedea NICIUN glonț cat timp cineva tragea cu laser.
+  const bm=beams.slice(0,12).map(b=>({x:P((b.x||0)/iw),y:P((b.y||0)/ih),w:P((b.w||12)/ih)}));
+  // fulgerele (arc, storm) nu sunt nici gloante, nici raze: fara ele oaspetele nu-si
+  // vedea arma cu electricitate. Forma compacta [x1,y1,x2,y2,cat a mai ramas] — sunt multe.
+  const zp=zaps.slice(0,24).map(z=>[P(z.x1/iw),P(z.y1/ih),P(z.x2/iw),P(z.y2/ih),+(z.life/(z.max||1)).toFixed(2)]);
   const snap={t:'s',sc:score|0,wv:wave|0,lv:player.lives|0,cm:mult||1,
-    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,
+    p1x:P((player.x||0)/iw),p1y:P((player.y||0)/ih),en:en,eb:eb,pb:pb,pk:pk,bm:bm,zp:zp,gv:gravityMode?1:0,
     hw:iw, hh:ih, wm:player.wingmen|0,
+    // frenezia e a echipei intregi (bonus de viteza pentru amandoi): fara ea in
+    // instantaneu, oaspetele nu vedea niciodata aura, bara sau anuntul "FRENEZIE!"
+    fz:+frenzy.toFixed(3), fzt:+frenzyT.toFixed(2),
     fl:(flash>0&&flashCol)?flashCol:0};
   // Starea fiecărei nave, ca oaspetele să-și vadă viețile LUI, nu pe ale gazdei.
   // `h` = nava gazdei, `g` = nava oaspetelui — rolurile sunt fixe, nu mai trebuie alt indicator.
@@ -1241,10 +1295,20 @@ function applySnapshot(m){
   pickups=mergeNet(pickups, m.pk||[], p=>({x:MX(p.x),y:MY(p.y),type:p.ty,r:15,t:0,
     tier:p.tr||0,
     weapon:(p.w && WEAPONS && WEAPONS[p.w]) ? p.w : Object.keys(WEAPONS||{pulse:1})[0]}));
+  // fasciculele nu se interpoleaza — se refac in fiecare cadru la gazda, deci
+  // le refacem direct din instantaneul curent, nu prin mergeNet
+  beams.length=0; (m.bm||[]).forEach(b=>beams.push({x:MX(b.x),y:MY(b.y),w:MR(b.w)||12}));
+  zaps.length=0; (m.zp||[]).forEach(z=>zaps.push({x1:MX(z[0]),y1:MY(z[1]),x2:MX(z[2]),y2:MY(z[3]),life:z[4]||0.1,max:1}));
   netSnapT = 0;                               // porneste cronometrul pana la urmatorul instantaneu
   p2.px=p2.x; p2.py=p2.y; p2.tx=MX(m.p1x); p2.ty=MY(m.p1y);
   if(!p2.active){ p2.x=p2.px=p2.tx; p2.y=p2.py=p2.ty; }   // prima data apare direct, nu aluneca din colt
   p2.active=true;
+  // frenezia e a echipei: fara sincronizarea asta oaspetele nu vedea niciodata
+  // aura, bara sau anuntul de FRENEZIE, desi bonusul de viteza tot se aplica pe gazda
+  const wasFrenzy=frenzyT>0;
+  frenzy=m.fz||0; frenzyT=m.fzt||0;
+  gravityMode=!!m.gv;   // altfel oaspetele n-are voie in zona de sus si nu vede fantana
+  if(frenzyT>0&&!wasFrenzy){ flash=0.4; flashCol='#ffd1ec'; shake(11,.32); toast('FRENEZIE! 🌟','#ff8fc7'); }
   if(m.fl){flash=0.3;flashCol=m.fl;}
   if(m.bt!==undefined){ bossIntro=INTRO_DUR-m.bt; introBoss={type:m.bty,name:m.bnm,col:m.bco,acc:m.bac||null,leafBoss:!!m.blf,style:m.bst||0,slammed:true}; } else bossIntro=0;
   updateHUD();
@@ -1275,24 +1339,43 @@ function guestUpdate(dt){
       nx:+(((player.x - coopView.ox) / _pw)).toFixed(3),
       ny:+(((player.y - coopView.oy) / _ph)).toFixed(3)}); }
   for(const p of particles){ if(p.grav)p.vy+=p.grav*dt; if(p.vr)p.spin=(p.spin||0)+p.vr*dt; p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;} particles=particles.filter(p=>p.life>0); if(particles.length>200)particles.splice(0,particles.length-200);
+  // update(dt) al gazdei stinge flash/shake — oaspetele nu-l ruleaza niciodata,
+  // deci fara asta orice tremur sau fulger (moarte, frenezie) ramanea blocat pe ecran
+  if(flash>0)flash=Math.max(0,flash-dt*1.6);
+  if(shakeT>0)shakeT=Math.max(0,shakeT-dt);
+  updateScenery(dt);     // fundalul e local si decorativ, dar trebuie sa se miste si aici
 }
 // Lovitura merge la nava atinsă: vieți, scut și moarte proprii. Cealaltă navă joacă mai departe.
-function hitTeam(ship){ if(ship.invuln>0||ship.dead)return;
+function hitTeam(ship){ if(godMode||ship.invuln>0||ship.dead)return;
   if(ship.shield>0){ship.shield=0;ship.invuln=1.4;floater(ship.x,ship.y-26,'scut spart','#7ef9d2');shake(10,.3);snd.hurt();return;}
   ship.lives--; ship.hitThisWave=true; if(ship===player)runStats.hitThisWave=true; snd.hurt(); boom(ship.x,ship.y,30,'#7ef9d2'); shake(18,.5); combo=0;mult=1; updateHUD();
   if(ship.lives<=0){ ship.dead=true; ship.deadT=1.1; if(ship===p2)toast('P2 a fost doborât 💔','#ff8fc7'); }
   else { ship.invuln=2.4; ship.x=W/2; ship.y=H-130; } }
-function drawP2(){ const im=sprite('ship'); if(!im||p2.dead&&p2.deadT<=0.6)return;
-  const R=p2.r||19;
-  ctx.save(); ctx.translate(p2.x,p2.y); if(p2.invuln>0&&Math.floor(performance.now()/80)%2)ctx.globalAlpha=0.4;
-  ctx.strokeStyle='rgba(126,249,210,.7)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,R+8,0,TAU); ctx.stroke();
-  const fl=10+Math.random()*8; ctx.fillStyle='rgba(143,211,255,.8)'; ctx.beginPath(); ctx.moveTo(-6,R); ctx.lineTo(6,R); ctx.lineTo(0,R+fl); ctx.fill();
-  const d=R*2.6; ctx.drawImage(im,-d/2,-d/2,d,d); ctx.globalAlpha=1;
-  ctx.fillStyle='#7ef9d2'; ctx.font='800 11px "Baloo 2"'; ctx.textAlign='center'; ctx.fillText('P2',0,-R-12); ctx.restore(); }
-
+// Tot ce misca in fundal: stele, praf, nebuloase, nori, stele cazatoare, petalele
+// sezoniere, scanteile si derapajul de parallax. Nimic din toate astea nu tine de
+// reguli de joc, deci nu se sincronizeaza prin retea — dar TREBUIE sa ruleze si la
+// oaspete. Statea doar in update()-ul gazdei, iar oaspetele iese devreme din el,
+// asa ca la el cerul ramanea complet inghetat: planeta si luna lipseau (pozitia lor
+// vine din bgScroll), iar petalele stateau pe loc.
+function updateScenery(dt){
+  bgScroll+=dt*(1+warpT*7);
+  for(const s of stars0){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
+  for(const s of stars1){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
+  for(const s of stars2){s.y+=s.v*dt; s.tw+=dt*3; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
+  for(const d of dust){d.y+=d.v*dt; if(d.y-6>H){d.y=-6;d.x=rand(0,W);}}
+  for(const n of nebs){n.y+=n.v*dt; if(n.y-n.r>H){n.y=-n.r;n.x=rand(0,W);}}
+  for(const c of clouds){c.y+=c.v*dt; if(c.y-c.r>H){c.y=-c.r;c.x=rand(0,W);c.r=rand(200,380);c.a=rand(.05,.11);c.vi=randi(0,2);}}
+  for(const s of warpStars){ s.y+=dt*(36+warpT*1700)*s.v; if(s.y>H+8){s.y=-8;s.x=rand(0,W);} }
+  for(const s of fgSparks){ s.y-=s.v*dt; s.tw+=dt*2.5; if(s.y<-6){s.y=H+6;s.x=rand(0,W);} }
+  for(const a of ambient){ a.y+=a.v*dt; a.sw+=dt*1.5; a.rot+=a.vr*dt; if(a.y>H+8){a.y=-8;a.x=rand(0,W);} }
+  if(!traveling && shootStars.length<2 && Math.random()<dt*0.10)
+    shootStars.push({x:rand(W*0.05,W*0.95),y:rand(-20,H*0.25),vx:(Math.random()<.5?1:-1)*rand(260,420),vy:rand(150,260),life:rand(.6,1.0),max:.9});
+  for(const ss of shootStars){ ss.x+=ss.vx*dt; ss.y+=ss.vy*dt; ss.life-=dt; }
+  if(shootStars.length)shootStars=shootStars.filter(s=>s.life>0);
+}
 function update(dt){
   if(net.mode==='guest'){ guestUpdate(dt); return; }
-  bgScroll+=dt*(1+warpT*7); formT+=dt; chainT+=dt;
+  formT+=dt; chainT+=dt;
   _ftA+=dt; _ftN++;
   if(_ftN>=120){ const avg=_ftA/_ftN; if(avg>0.024)lowFx=true; else if(avg<0.017)lowFx=false; _ftA=0; _ftN=0; }
   // formation choreography: slow constant descent toward the player + periodic swoop-dive waves
@@ -1315,9 +1398,6 @@ function update(dt){
       player.x+=(pp.x-player.x)*Math.min(1,dt*6); player.y+=(pp.y-player.y)*Math.min(1,dt*6);
     } else { player.x+=(W/2-player.x)*Math.min(1,dt*2.4); player.y+=(H*0.74-player.y)*Math.min(1,dt*2.4); }
   } else { warpT=clamp(warpT-dt/0.35,0,1); travelScale=1; }
-  for(const s of warpStars){ s.y+=dt*(36+warpT*1700)*s.v; if(s.y>H+8){s.y=-8;s.x=rand(0,W);} }
-  for(const s of fgSparks){ s.y-=s.v*dt; s.tw+=dt*2.5; if(s.y<-6){s.y=H+6;s.x=rand(0,W);} }
-  for(const a of ambient){ a.y+=a.v*dt; a.sw+=dt*1.5; a.rot+=a.vr*dt; if(a.y>H+8){a.y=-8;a.x=rand(0,W);} }
   checkAchv();
   if(bossIntro>0){ bossIntro-=dt; const tt=INTRO_DUR-bossIntro;
     if(introBoss&&!introBoss.slammed&&tt>=2.05){ introBoss.slammed=true;
@@ -1458,7 +1538,10 @@ function update(dt){
       particles.push(part(b.x,b.y,a,rand(40,90),'#bfe9ff',rand(.15,.3),rand(1.5,2.6)));
       if(runStats.graze%25===0){ toast('RAZANT ×'+runStats.graze+' ⚡','#bfe9ff'); if(snd.pickup)snd.pickup(); } } }
   if(net.mode==='host'&&p2.active&&p2.invuln<=0&&!p2.dead){ for(const b of eBullets){ const rr=p2.r-3+(b.r||7);
-    if(dist2(b.x,b.y,p2.x,p2.y)<rr*rr){b.gone=true;hitTeam(p2);break;} } }
+    const gd=dist2(b.x,b.y,p2.x,p2.y);
+    if(gd<rr*rr){b.gone=true;hitTeam(p2);break;}
+    // frenezia e a echipei, deci si razantul prietenului o incarca
+    else if(!b._grz2 && gd<(rr+16)*(rr+16)){ b._grz2=true; addFrenzy(0.012); } } }
   eBullets=eBullets.filter(b=>!b.gone);
 
   // obiectele de pe jos — trase spre o navă doar cât ține magnetul; culese de nava care le atinge
@@ -1502,18 +1585,7 @@ function update(dt){
   }
   if(!waveActive){betweenT-=dt; if(betweenT<=0)nextWave();}
 
-  // bg motion
-  for(const s of stars0){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
-  for(const s of stars1){s.y+=s.v*dt; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
-  for(const s of stars2){s.y+=s.v*dt; s.tw+=dt*3; if(s.y>H){s.y=-2;s.x=rand(0,W);}}
-  for(const d of dust){d.y+=d.v*dt; if(d.y-6>H){d.y=-6;d.x=rand(0,W);}}
-  for(const n of nebs){n.y+=n.v*dt; if(n.y-n.r>H){n.y=-n.r;n.x=rand(0,W);}}
-  for(const c of clouds){c.y+=c.v*dt; if(c.y-c.r>H){c.y=-c.r;c.x=rand(0,W);c.r=rand(200,380);c.a=rand(.05,.11);c.vi=randi(0,2);}}
-  // occasional shooting star streaking across the sky
-  if(!traveling && shootStars.length<2 && Math.random()<dt*0.10)
-    shootStars.push({x:rand(W*0.05,W*0.95),y:rand(-20,H*0.25),vx:(Math.random()<.5?1:-1)*rand(260,420),vy:rand(150,260),life:rand(.6,1.0),max:.9});
-  for(const ss of shootStars){ ss.x+=ss.vx*dt; ss.y+=ss.vy*dt; ss.life-=dt; }
-  if(shootStars.length)shootStars=shootStars.filter(s=>s.life>0);
+  updateScenery(dt);
 
   if(net.mode==='host'){ net.snapT-=dt; if(net.snapT<=0){ net.snapT=0.05; netSnapshot(); } }
 }
@@ -1603,11 +1675,12 @@ window.__dbg = { hitTeam, collect, activeShips, fireAllShips, fireFrom, fireMiss
   get score(){return score}, get wave(){return wave}, get combo(){return combo}, get mult(){return mult},
   get coins(){return coins}, get W(){return W}, get H(){return H}, get bossIntro(){return bossIntro},
   get enemies(){return enemies}, get bullets(){return bullets}, get eBullets(){return eBullets},
-  get pickups(){return pickups}, get beams(){return beams}, get runStats(){return runStats},
-  get WEAPONS(){return WEAPONS},
+  get pickups(){return pickups}, get beams(){return beams}, get zaps(){return zaps},
+  get runStats(){return runStats},
+  get WEAPONS(){return WEAPONS}, get frenzy(){return frenzy}, get frenzyT(){return frenzyT},
   set: { score:v=>score=v, combo:v=>combo=v, mult:v=>mult=v, state:v=>state=v, wave:v=>wave=v,
-         bossIntro:v=>bossIntro=v, frenzyT:v=>frenzyT=v, coins:v=>addCoins(v-coins),
+         bossIntro:v=>bossIntro=v, frenzy:v=>frenzy=v, frenzyT:v=>frenzyT=v, coins:v=>addCoins(v-coins),
          enemies:a=>enemies=a, bullets:a=>bullets=a, eBullets:a=>eBullets=a,
-         pickups:a=>pickups=a, beams:a=>beams=a } };
+         pickups:a=>pickups=a, beams:a=>beams=a, zaps:a=>zaps=a } };
 
-export { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, daily, drawP2, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };
+export { COIN_TIERS, DEV_TOOLS, INTRO_DUR, TRAVEL_DUR, isGod, setGod, skipWave, activateBurst, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, coopReset, coopWake, daily, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, fireMissile, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, mult, nebs, net, netHost, netJoin, p2, part, particles, pickups, player, runAchvNew, score, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, startGame, startStory, state, toMenu, toast, togglePause, travelScale, traveling, warpStars, warpT, wave, zaps };

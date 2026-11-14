@@ -48,6 +48,36 @@ body.tsummer .mtopbar .coinPill,body.tsummer .miconbtn,body.tsummer .modechip,bo
   background:linear-gradient(160deg,rgba(40,18,45,.55),rgba(30,12,38,.42));border-color:rgba(255,235,220,.42);
   box-shadow:0 4px 14px rgba(80,30,60,.30)}
 body.tsummer .modechip em,body.tsummer .dsSummary{color:#fff4ee}
+/* ——— tema Halloween: portocaliu de dovleac, mov de vrăjitoare, verde de ceaun ———
+   Doar culori: nicio regulă nu mută butoanele și nu atinge playerul muzical din dreapta. */
+body.thalloween #menu .fxveil{background:radial-gradient(120% 95% at 50% 38%,rgba(20,10,30,.06),rgba(12,5,18,.50))}
+body.thalloween .logo{background:linear-gradient(180deg,#fff4dc 8%,#ffa53b 50%,#b866ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 0 rgba(60,20,8,.8)) drop-shadow(0 0 6px rgba(20,6,30,.75)) drop-shadow(0 0 22px rgba(255,140,40,.5))}
+body.thalloween .logo small{color:#a8ff6e;-webkit-text-fill-color:#a8ff6e}
+body.thalloween .playBtn{color:#3a1405;background:linear-gradient(160deg,#ffd36b,#ff8a1f 55%,#d9500c);
+  box-shadow:0 8px 0 rgba(110,36,6,.8),0 16px 32px rgba(255,120,30,.45),inset 0 -6px 14px rgba(140,40,0,.35)}
+body.thalloween .playBtn:active{box-shadow:0 3px 0 rgba(110,36,6,.8),0 8px 18px rgba(255,120,30,.4),inset 0 -6px 14px rgba(140,40,0,.35)}
+body.thalloween .playBtn span::after{content:" 🎃"}
+body.thalloween .modechip:nth-child(n){background:linear-gradient(160deg,rgba(70,28,100,.78),rgba(26,10,38,.78));
+  border-color:rgba(255,150,60,.62);box-shadow:0 4px 14px rgba(0,0,0,.45),0 0 12px rgba(255,140,40,.18),inset 0 0 12px rgba(170,100,255,.16)}
+body.thalloween .modechip em{color:#ffe2b8}
+body.thalloween .mtopbar .coinPill,body.thalloween .miconbtn,body.thalloween .dsSummary{
+  background:linear-gradient(160deg,rgba(60,24,86,.72),rgba(22,9,32,.66));border-color:rgba(255,150,60,.55);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+body.thalloween .mtopbar .coinPill{color:#ffd58a}
+body.thalloween .mtopbar .gemPill{color:#e2d0ff}
+body.thalloween .dsSummary{color:#ffe2b8}
+body.thalloween .dailyCard{background:linear-gradient(160deg,rgba(50,20,72,.9),rgba(20,8,30,.9));border-color:rgba(255,150,60,.45);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+body.thalloween .dcHead{color:#ffd58a}
+body.thalloween .dcMod{background:linear-gradient(90deg,#ffb347,#ff7a1a)}
+body.thalloween .cibtn{border-color:rgba(255,150,60,.6);background:linear-gradient(180deg,rgba(255,140,40,.26),rgba(80,26,110,.52));
+  box-shadow:0 0 18px rgba(255,140,40,.22),inset 0 1px 0 rgba(255,255,255,.2)}
+body.thalloween .cibtn:hover{background:linear-gradient(180deg,rgba(255,140,40,.44),rgba(100,34,140,.62));box-shadow:0 0 28px rgba(255,140,40,.45),inset 0 1px 0 rgba(255,255,255,.25)}
+body.thalloween .cibtn.go{border-color:rgba(160,255,100,.72);background:linear-gradient(180deg,rgba(150,255,90,.30),rgba(36,100,40,.5));
+  box-shadow:0 0 24px rgba(150,255,90,.38),inset 0 1px 0 rgba(255,255,255,.25)}
+body.thalloween .cibtn.go:hover{background:linear-gradient(180deg,rgba(150,255,90,.48),rgba(46,120,50,.6));box-shadow:0 0 34px rgba(150,255,90,.55),inset 0 1px 0 rgba(255,255,255,.3)}
+body.thalloween .shoptab.on{color:#fff;background:linear-gradient(90deg,#ff8a1f,#b866ff)}
+body.thalloween #story .btn:not(.ghost){background:linear-gradient(180deg,#ffd36b,#ff8a1f);box-shadow:0 8px 0 #9a3c0a,0 16px 28px rgba(0,0,0,.4)}
+body.thalloween #story .btn:not(.ghost):active{box-shadow:0 4px 0 #9a3c0a,0 8px 16px rgba(0,0,0,.4)}
 .verTag{position:fixed;right:8px;bottom:6px;z-index:60;font:600 10px/1 monospace;color:#fff;opacity:.35;pointer-events:none}
 /* ——— monede, panou zilnic, magazin ——— */
 .coinPill{display:inline-flex;align-items:center;gap:6px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#ffe9a8;
@@ -88,7 +118,9 @@ body.tsummer .modechip em,body.tsummer .dsSummary{color:#fff4ee}
 .sbtn.on{background:rgba(255,255,255,.15);color:#ffd24a;cursor:default}
 /* ——— meniu fun & fancy ——— */
 #menu{justify-content:flex-start;gap:0;padding-top:max(10px,env(safe-area-inset-top))}
-.mtopbar{width:min(96vw,560px);display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px auto 4px;z-index:3;flex-wrap:nowrap}
+/* Bara de sus stă între căsuțele HUD-ului care se văd prin meniu: scorul în stânga și viețile în dreapta
+   (#menu are deja 24px pe laturi; +60px = după scor, +100px = înainte de cele 3 vieți). */
+.mtopbar{width:100%;max-width:720px;padding:0 100px 0 60px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px auto 4px;z-index:3;flex-wrap:nowrap}
 .pillrow{display:flex;gap:6px;flex-shrink:1;min-width:0}
 .pillrow .coinPill{padding:5px 10px;font-size:14px;white-space:nowrap}
 .miconrow{display:flex;gap:8px}
@@ -151,11 +183,40 @@ body.tsummer .modechip em,body.tsummer .dsSummary{color:#fff4ee}
 #musDockBtn.off{opacity:.45;filter:grayscale(.7)}
 .musGrip{position:relative;width:100%;text-align:center;font-size:13px;letter-spacing:3px;color:#c9b3e6;opacity:.85;cursor:grab;user-select:none;-webkit-user-select:none;margin:-4px 0 -2px}
 .musPanel{touch-action:none}
+/* Panoul porneşte cu clasa „hide" în index.html şi butonul 🎵 o comută, dar nu
+   exista nicio regula pentru ea: singura din proiect e .screen.hide, iar
+   #musPanel nu e .screen. Rezultatul era un player de muzică permanent peste
+   zona de joc şi un buton 🎵 care nu făcea nimic. */
+.musPanel.hide{display:none}
+/* Chenarul reactiv: --beat (0..1) şi --beatCol vin din ui-screens.js la fiecare
+   cadru. Fără ele (JS neîncărcat) rămân valorile de rezervă şi panoul arată ca
+   înainte. Glow-ul e pe box-shadow, nu pe un pseudo-element, ca să nu ne batem
+   cu stacking context-ul panoului (are deja z-index şi position). */
+.musPanel{
+  border-color:color-mix(in srgb, var(--beatCol,#fff) calc(35% + var(--beat,0)*65%), rgba(255,255,255,.25));
+  box-shadow:0 8px 24px rgba(0,0,0,.45),
+             0 0 calc(5px + var(--beat,0)*20px) var(--beatCol,transparent),
+             inset 0 0 calc(2px + var(--beat,0)*9px) color-mix(in srgb, var(--beatCol,#fff) calc(20% + var(--beat,0)*40%), transparent);
+  transition:none}
+/* butonul mare de play prinde şi el pulsul, ca să nu pară chenarul lipit */
+.musPanel .musCtl.big{box-shadow:0 0 calc(var(--beat,0)*14px) var(--beatCol,transparent)}
 .musPanel.dragging{cursor:grabbing;box-shadow:0 12px 32px rgba(0,0,0,.6),0 0 0 2px rgba(255,143,199,.5)}
 /* ——— overlay-urile pot derula; game over/pauză compacte în landscape ——— */
 #over,#shop,#pause,#opts{overflow-y:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start;padding-top:18px;padding-bottom:28px}
 #over .pcard,#pause .pcard{margin:auto}
 #shop .shopgrid{max-height:none;overflow:visible}
+/* „← înapoi" trebuie să fie mereu la vedere: grila creşte cât conţinutul, iar
+   #shop e containerul care derulează, deci pe un ecran lat şi scund butonul
+   ajungea sub marginea de jos şi părea că nu există ieşire din magazin.
+   Fixat în colţul din stânga-jos, nu centrat: grila e centrată şi lată de cel
+   mult 540px, aşa că acolo nu acoperă niciun card. Centrat, stătea exact peste
+   butonul de preţ al unui produs. */
+#shopBack{position:fixed;left:14px;bottom:14px;margin:0;z-index:7;
+  font-size:clamp(14px,3.6vw,17px);padding:9px 16px;
+  background:linear-gradient(180deg,rgba(60,24,70,.94),rgba(40,14,52,.96));
+  box-shadow:0 6px 22px rgba(0,0,0,.5)}
+/* ultimul rând de carduri trebuie să poată urca deasupra butonului */
+#shop{padding-bottom:76px}
 .sw{overflow:hidden;display:flex;align-items:center;justify-content:center}
 .sw.pv{background:rgba(255,255,255,.06)}
 .sw.pv canvas{width:46px;height:46px;display:block}
@@ -189,3 +250,58 @@ body.tsummer .modechip em,body.tsummer .dsSummary{color:#fff4ee}
   .dsSummary{padding:7px 12px;font-size:12px}
   .mparticles i{font-size:16px}
 }
+/* ——— ecranul de final: butoanele au prioritate, statisticile stau după „📊 detalii” ———
+   Chenarul nu trece niciodată de înălțimea ecranului: dacă detaliile nu încap, derulează doar ele.
+   Pe orizontală, butoanele stau în stânga și detaliile în dreapta, cu loc liber pentru playerul muzical. */
+#over .overCard{max-height:calc(100% - 8px);box-sizing:border-box}
+.overMain{display:flex;flex-direction:column;align-items:center;gap:inherit;flex:0 0 auto}
+.overMain .btn{min-width:200px}
+.overSmall{display:flex;gap:8px;justify-content:center}
+#over .overMain .btn.mini{min-width:0;font-size:13px;padding:6px 14px;border-radius:999px}
+.overDuo{display:flex;gap:14px;justify-content:center;font-size:14px;opacity:.95}
+.overDuo b{font-size:16px;color:#fff}
+.overDetails{display:flex;flex-direction:column;align-items:center;gap:8px;overflow-y:auto;min-height:0;flex:1 1 auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:2px}
+.overDetails[hidden]{display:none}
+.overDetails .chips.wrap{max-width:340px}
+#over .overDetails .chip{min-width:72px;padding:4px 8px}
+#over .overDetails .chip span{font-size:15px}#over .overDetails .chip b{font-size:14px}#over .overDetails .chip em{font-size:9px}
+/* pe verticală, chenarul începe sub coloana de butoane din dreapta, ca playerul muzical să nu-l acopere */
+@media (orientation:portrait) and (min-height:700px){ #over{padding-top:300px} }
+@media (max-height:560px){
+  .overMain .btn{min-width:160px}
+  .overDuo{font-size:12px}.overDuo b{font-size:13px}
+}
+@media (orientation:landscape) and (max-height:560px){
+  /* lasă liberă coloana din dreapta (pauză, sunet, muzică și panoul ei) */
+  #over{padding:8px 228px}   /* simetric: cardul ramane centrat, dar tot ocoleste coloana din dreapta */
+  #over .overCard{flex-direction:row;align-items:center;gap:14px;max-width:100%;max-height:calc(100% - 4px)}
+  /* in rand, flex-basis:auto ar lua latimea textului NEIMPARTIT pe randuri: un rand lung de
+     „realizari noi” lateste coloana si impinge titlul si butoanele afara din chenar */
+  #over .overMain{gap:5px;flex:0 1 auto;min-width:0;max-width:320px}
+  #over .overDetails{align-self:stretch;justify-content:safe center;max-width:300px}
+  #over .overDetails .chips.wrap{max-width:300px}
+  #over .overDetails .chip{min-width:62px;padding:3px 6px}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:640px){
+  #over{padding:8px 76px}
+}
+/* pe vertical (fereastră îngustă de PC) bara coboară sub HUD; în dreapta lasă loc coloanei pauză/sunet/muzică */
+@media (orientation:portrait){ .mtopbar{margin-top:48px;padding:0 40px 0 0} }
+/* telefoane foarte înguste pe orizontală: iconițele mai mici, ca să încapă între „SECTOR” și vieți */
+@media (orientation:landscape) and (max-width:600px){
+  .mtopbar{padding-right:92px}
+  .miconrow{gap:5px}
+  .miconbtn{width:32px;height:32px;font-size:15px;border-radius:10px}
+}
+/* ——— pauza: pe orizontală, cu ecran scund, butoanele stau unul lângă altul, ca „spre meniu” să nu ajungă jos ——— */
+.pauseBtns{display:flex;flex-direction:column;align-items:center;gap:12px}
+@media (max-height:560px){ .pauseBtns{gap:6px} }
+@media (orientation:landscape) and (max-height:560px){
+  .pauseBtns{flex-direction:row;gap:10px}
+  /* ca la ecranul de final: cardul stă la stânga panoului muzical, care e mereu deasupra */
+  #pause{padding-right:228px}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:640px){ #pause{padding-right:76px} }
+/* pe telefon nu există tasta P */
+@media (pointer:coarse){ #pause .keys{display:none} }

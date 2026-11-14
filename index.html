@@ -22,7 +22,7 @@
 <div id="rotate"><div class="rphone">📱</div><div class="rtxt">Rotește telefonul</div><div class="rsub">Kawaii Invaders se joacă pe lat 🐾</div></div>
 <div id="introScreen" style="position:fixed;inset:0;z-index:99999;background:#000;display:none;align-items:center;justify-content:center;overflow:hidden">
   <video id="introBg" playsinline webkit-playsinline muted autoplay preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(28px) brightness(.5);transform:scale(1.14)"></video>
-  <video id="introVid" playsinline webkit-playsinline muted autoplay preload="auto" style="position:relative;z-index:1;width:100%;height:100%;object-fit:fill"></video>
+  <video id="introVid" playsinline webkit-playsinline muted autoplay preload="auto" style="position:relative;z-index:1;width:100%;height:100%;object-fit:contain"></video>
   <div id="introSound" style="position:absolute;z-index:2;top:18px;left:50%;transform:translateX(-50%);padding:9px 16px;border-radius:22px;background:rgba(0,0,0,.5);color:#fff;font:600 14px/1 system-ui,sans-serif;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)">🔊 Atinge pentru sunet</div>
   <button id="introSkip" style="position:absolute;z-index:2;bottom:26px;right:20px;padding:11px 20px;border:none;border-radius:22px;background:rgba(0,0,0,.55);color:#fff;font:700 15px/1 system-ui,sans-serif;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)">Sari peste ⏭</button>
 </div>
@@ -44,14 +44,14 @@
       <button class="iconbtn" id="muteBtn" aria-label="sunet">🔊</button>
       <div id="musicDock">
         <button class="iconbtn" id="musDockBtn" aria-label="muzică">🎵</button>
-        <div class="musPanel hide" id="musPanel">
+        <div class="musPanel" id="musPanel">
           <div class="musGrip" title="trage-mă">⠿<button class="musMin" id="musMin" title="minimizează">–</button></div>
           <div class="musRow">
             <button class="musCtl" id="musPrev">⏮</button>
             <button class="musCtl big" id="musPlay">⏸</button>
             <button class="musCtl" id="musNext">⏭</button>
           </div>
-          <div class="musName" id="musName">Sunny Hill Dash 🎧</div>
+          <div class="musName" id="musName">Anime Intro 🌸</div>
         </div>
       </div>
     </div>
@@ -148,8 +148,9 @@
       <button class="cibtn gopt" data-k="wide">🖥️ PC lat (3:2)</button>
       <button class="cibtn gopt" data-k="full">🪟 Tot ecranul</button>
     </div>
-    <div class="tag" style="margin-top:10px">Tema meniului — o schimbăm pe sezon 🌊</div>
+    <div class="tag" style="margin-top:10px">Tema meniului — o schimbăm pe sezon 🍂</div>
     <div class="cimenu">
+      <button class="cibtn topt" data-t="halloween">🎃 Halloween (bântuit)</button>
       <button class="cibtn topt" data-t="summer">🏖️ Vară (plajă)</button>
       <button class="cibtn topt" data-t="space">🌌 Galactic (clasic)</button>
       <button class="cibtn" id="optsBack">înapoi</button>
@@ -191,10 +192,10 @@
     <button class="btn ghost" id="storyBack">înapoi</button>
   </div>
 
-  <div id="shipBox" style="position:fixed;inset:0;z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,6,22,.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)">
+  <div id="shipBox" style="position:fixed;inset:0;z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;overflow-y:auto;padding:16px 0;background:rgba(10,6,22,.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)">
     <div style="font-family:'Baloo 2';font-weight:800;color:#fff;font-size:24px">ALEGE NAVA 🚀</div>
     <div style="color:#fff;opacity:.72;font-size:13px;margin:4px 0 18px">fiecare are un stil diferit</div>
-    <div id="shipCards" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:540px;padding:0 14px"></div>
+    <div id="shipCards" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:min(660px,96vw);padding:0 14px"></div>
   </div>
   <div id="perkBox" class="hide" style="position:fixed;inset:0;z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,6,22,.74);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)">
     <div style="font-family:'Baloo 2';font-weight:800;color:#fff;font-size:24px;text-shadow:0 2px 0 rgba(0,0,0,.4)">UPGRADE! 🌟</div>
@@ -206,50 +207,62 @@
     <div class="pcard">
       <div class="pbubbles" aria-hidden="true"><i>🌸</i><i>⭐</i><i>🍬</i><i>💖</i><i>✨</i><i>🌟</i></div>
       <div class="ptitle baloo">⏸ PAUZĂ</div>
+      <!-- butoanele imediat sub titlu, ca „spre meniu” să nu ajungă în josul ecranului -->
+      <div class="pauseBtns">
+        <button class="btn" id="resumeBtn">▶ CONTINUĂ</button>
+        <button class="btn ghost" id="quitBtn">🏠 spre meniu</button>
+      </div>
       <div class="chips">
         <div class="chip c1"><span>🏆</span><em>scor</em><b id="pStatScore">0</b></div>
         <div class="chip c2"><span>🌊</span><em>val</em><b id="pStatWave">1</b></div>
         <div class="chip c3"><span>🪙</span><em>monede</em><b id="pStatCoins">0</b></div>
       </div>
-      <button class="btn" id="resumeBtn">▶ CONTINUĂ</button>
-      <button class="btn ghost" id="quitBtn">🏠 spre meniu</button>
       <div class="keys">apasă <b>P</b> ca să continui</div>
     </div>
   </div>
 
   <div class="screen hide" id="over"><div class="veil"></div>
-    <div class="pcard">
+    <div class="pcard overCard">
       <div class="pbubbles" aria-hidden="true"><i>🌸</i><i>⭐</i><i>🍬</i><i>💖</i><i>✨</i><i>🌟</i></div>
-      <div class="ptitle baloo" id="overTitle">GAME OVER</div>
-      <div class="scorebig baloo"><em>scor final</em><b id="finalScore">0</b></div>
-      <div class="chips wrap">
-        <div class="chip c2"><span>🌊</span><em>val maxim</em><b id="oWave">1</b></div>
-        <div class="chip c1"><span>💥</span><em>doborâți</em><b id="oKills">0</b></div>
-        <div class="chip c4"><span>⚡</span><em>combo max</em><b id="oCombo">x1</b></div>
-        <div class="chip c3"><span>🪙</span><em>monede</em><b id="oCoins">0</b></div>
-        <div class="chip c5"><span>🚀</span><em>rachete</em><b id="oMissiles">0</b></div>
-        <div class="chip c6"><span>👑</span><em>boși</em><b id="oBoss">0</b></div>
+      <!-- esențialul, mereu la vedere: scorul și butoanele de ieșire -->
+      <div class="overMain">
+        <div class="ptitle baloo" id="overTitle">GAME OVER</div>
+        <div class="scorebig baloo"><em>scor final</em><b id="finalScore">0</b></div>
+        <div class="overDuo" id="overDuo" style="display:none"><span>💗 <b id="oDuoMe">0</b></span><span>💙 <b id="oDuoHim">0</b></span></div>
+        <div class="scoreline" id="bestLine" style="font-size:13px;opacity:.85"></div>
+        <button class="btn" id="againBtn">🔁 ÎNCĂ O DATĂ</button>
+        <button class="btn ghost" id="menuBtn">🏠 meniu</button>
+        <div class="overSmall">
+          <button class="btn ghost mini" id="detailsBtn" aria-expanded="false">📊 detalii</button>
+          <button class="btn ghost mini" id="shareBtn">📤 partajează</button>
+        </div>
       </div>
-      <div class="chips wrap" id="coopSplit" style="display:none">
-        <div class="chip c1"><span>💗</span><em>scorul tău</em><b id="oScoreMe">0</b></div>
-        <div class="chip c2"><span>💙</span><em>al prietenului</em><b id="oScoreHim">0</b></div>
-        <div class="chip c3"><span>💗🪙</span><em>monedele tale</em><b id="oCoinsMe">0</b></div>
-        <div class="chip c4"><span>💙🪙</span><em>ale prietenului</em><b id="oCoinsHim">0</b></div>
+      <!-- statisticile: doar la cerere, ca să nu împingă butoanele afară din ecran -->
+      <div class="overDetails" id="overDetails" hidden>
+        <div class="chips wrap">
+          <div class="chip c2"><span>🌊</span><em>val maxim</em><b id="oWave">1</b></div>
+          <div class="chip c1"><span>💥</span><em>doborâți</em><b id="oKills">0</b></div>
+          <div class="chip c4"><span>⚡</span><em>combo max</em><b id="oCombo">x1</b></div>
+          <div class="chip c3"><span>🪙</span><em>monede</em><b id="oCoins">0</b></div>
+          <div class="chip c5"><span>🚀</span><em>rachete</em><b id="oMissiles">0</b></div>
+          <div class="chip c6"><span>👑</span><em>boși</em><b id="oBoss">0</b></div>
+        </div>
+        <div class="chips wrap" id="coopSplit" style="display:none">
+          <div class="chip c1"><span>💗</span><em>scorul tău</em><b id="oScoreMe">0</b></div>
+          <div class="chip c2"><span>💙</span><em>al prietenului</em><b id="oScoreHim">0</b></div>
+          <div class="chip c3"><span>💗🪙</span><em>monedele tale</em><b id="oCoinsMe">0</b></div>
+          <div class="chip c4"><span>💙🪙</span><em>ale prietenului</em><b id="oCoinsHim">0</b></div>
+        </div>
       </div>
-      <div class="scoreline" id="bestLine" style="font-size:13px;opacity:.85"></div>
-      <button class="btn" id="againBtn">🔁 ÎNCĂ O DATĂ</button>
-      <button class="btn ghost" id="shareBtn">📤 partajează scorul</button>
-      <button class="btn ghost" id="menuBtn">🏠 meniu</button>
     </div>
   </div>
 
   <div id="banner"><div class="inner baloo" id="bannerTxt"></div></div>
   <div id="toast" class="baloo"></div>
-  <div class="verTag">ki-v70</div>
+  <div class="verTag">ki-v73</div>
 </div>
 
 <script src="assets/sprites-data.js"></script>
-<script src="assets/music-data.js"></script>
 <script src="assets/backgrounds-data.js"></script>
 <script type="module" src="./src/main.js"></script>
 </body>

@@ -216,7 +216,9 @@ function drawGlow(){
   // enemy bullets (soft danger glow)
   for(const b of eBullets){ gctx.fillStyle=hexA(b.color,.4); glowDot(b.x,b.y,(b.r||7)*1.7); }
   // beams
-  for(const bm of beams){const gw=(bm.w||18)*1.5;gctx.fillStyle='rgba(143,211,255,.8)';gctx.fillRect(bm.x-gw/2,0,gw,player.y);}
+  // bm.y e marginea de jos a navei care trage — fara el aureola unei raze trase de
+  // prieten se oprea tot in dreptul navei MELE
+  for(const bm of beams){const gw=(bm.w||18)*1.5;gctx.fillStyle='rgba(143,211,255,.8)';gctx.fillRect(bm.x-gw/2,0,gw,bm.y!==undefined?bm.y:player.y);}
   // zaps
   for(const z of zaps){gctx.strokeStyle='rgba(200,155,255,.9)';gctx.lineWidth=10;gctx.beginPath();gctx.moveTo(z.x1,z.y1);gctx.lineTo(z.x2,z.y2);gctx.stroke();}
   // explosion sparks + rings

@@ -18,4 +18,10 @@ const ui={score:el('scoreV'),sector:el('sectorV'),combo:el('comboTag'),lives:el(
 // nevoie de initBg dupa ce fundalul e gata, fara sa-l importe la evaluare)
 const hooks={};
 
-export { TAU, clamp, dist2, el, hooks, lerp, rand, randi, ui };
+// „📊 detalii" arata/ascunde statisticile de pe ecranul de final. Sta aici,
+// nu in ui-screens.js, ca sa-l poata chema si sim.js (gameOver / co-op terminat)
+// fara sa importe modulul care leaga butoanele.
+function setOverDetails(open){ const d=el('overDetails'), b=el('detailsBtn'); if(!d||!b)return;
+  d.hidden=!open; b.setAttribute('aria-expanded',open?'true':'false'); b.textContent=open?'📊 ascunde':'📊 detalii'; }
+
+export { TAU, clamp, dist2, el, hooks, lerp, rand, randi, setOverDetails, ui };

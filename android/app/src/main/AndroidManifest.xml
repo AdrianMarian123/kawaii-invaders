@@ -21,6 +21,12 @@
             </intent-filter>
         </activity>
 
+        <!-- AdMob App ID, injectat din android/admob.properties (generat din .env).
+             Fara acest meta-data SDK-ul AdMob arunca excepsie la pornirea aplicatiei. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

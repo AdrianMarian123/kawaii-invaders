@@ -14,7 +14,7 @@ import { TAU, clamp, lerp, rand } from '../game/utils.js';
 import { CRITCOL, SECTORS, WEAPONS } from '../game/config.js';
 import { critCol, equippedAura, equippedShip, equippedTrail, equippedWeapon, equippedWing, rainbowCol } from '../game/meta.js';
 import { snd, tone } from '../game/audio.js';
-import { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, drawP2, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, nebs, net, p2, part, particles, pickups, player, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, state, travelScale, traveling, warpStars, warpT, wave, zaps } from '../game/sim.js';
+import { COIN_TIERS, INTRO_DUR, TRAVEL_DUR, ambient, beams, betweenT, bgScroll, bossBeams, bossIntro, bullets, camZoom, clouds, drawTravelMap, dust, eBullets, enemies, eventOf, fgSparks, flash, flashCol, floaters, frenzy, frenzyT, gravityMode, introBoss, lowFx, nebs, net, p2, part, particles, pickups, player, sector, sectorIndex, selectedShip, shake, shakeMag, shakeT, shootStars, stars0, stars1, stars2, state, travelScale, traveling, warpStars, warpT, wave, zaps } from '../game/sim.js';
 
 //==================================================================
 function draw(){
@@ -33,11 +33,12 @@ function draw(){
   for(const e of enemies){ if(e.boss||e.bauble||e.leaf)continue; ctx.beginPath(); ctx.ellipse(e.x,e.y+e.r*0.9,e.r*0.9,e.r*0.32,0,0,TAU); ctx.fill(); }
   for(const p of pickups){ ctx.beginPath(); ctx.ellipse(p.x,p.y+13,9,3.5,0,0,TAU); ctx.fill(); }
 
-  // beams behind ship
-  for(const bm of beams){ const bw=bm.w||12; const grd=ctx.createLinearGradient(bm.x,0,bm.x,player.y);
+  // beams behind ship — bm.y is the bottom edge of whichever ship fired it
+  for(const bm of beams){ const bw=bm.w||12, by=bm.y!==undefined?bm.y:(player.y-player.r);
+    const grd=ctx.createLinearGradient(bm.x,0,bm.x,by);
     grd.addColorStop(0,'rgba(143,211,255,0)'); grd.addColorStop(1,'rgba(143,211,255,.8)');
-    ctx.fillStyle=grd; ctx.fillRect(bm.x-bw/2,0,bw,player.y-player.r);
-    ctx.fillStyle='rgba(255,255,255,.72)'; ctx.fillRect(bm.x-bw*0.17,0,bw*0.34,player.y-player.r); }
+    ctx.fillStyle=grd; ctx.fillRect(bm.x-bw/2,0,bw,by);
+    ctx.fillStyle='rgba(255,255,255,.72)'; ctx.fillRect(bm.x-bw*0.17,0,bw*0.34,by); }
   // zaps
   for(const z of zaps){ const a=z.life/z.max; ctx.lineCap='round'; ctx.lineJoin='round';
     const pts=[[z.x1,z.y1]]; for(let i=1;i<=6;i++){const tt=i/6;pts.push([z.x1+(z.x2-z.x1)*tt+rand(-8,8),z.y1+(z.y2-z.y1)*tt+rand(-8,8)]);}
@@ -266,20 +267,20 @@ function drawGalaxy(gx,gy,gr,seed){
   ctx.restore();
 }
 let _skyG=null,_skyKey='', _bandG=null,_bandKey='', _tvG=null,_tvKey='', _sheenG=null,_sheenH=0;
-// ---- player ship: cute Mochi pod ----
-function drawPlayer(){
-  const x=player.x,y=player.y;
-  const blink=player.invuln>0&&Math.floor(player.invuln*12)%2===0;
-  if(frenzyT>0){ ctx.save(); ctx.translate(x,y); const t=performance.now()*0.006, R=player.r*2.1+Math.sin(t*2)*3;
-    ctx.globalCompositeOperation='lighter';
-    for(let i=0;i<6;i++){ const a=t+i/6*TAU; ctx.fillStyle='hsla('+((i/6*360+t*120)%360)+',95%,65%,.5)';
-      ctx.beginPath(); ctx.arc(Math.cos(a)*R*0.5,Math.sin(a)*R*0.5,R*0.5,0,TAU); ctx.fill(); }
-    ctx.restore(); }
-  ctx.save(); ctx.translate(x,y); ctx.rotate((player.aimRot||0)+player.tilt);
-  if(traveling)ctx.scale(travelScale,travelScale);
-  if(blink)ctx.globalAlpha=0.4;
-  // wingmen — tiny teacup chihuahua helpers in pink sweaters
-  for(let i=0;i<player.wingmen;i++){ const sx=(i===0?-44:44), by=-2+Math.sin(performance.now()/280+i*2)*2, R=11;
+// frenzy overdrive aura — shared by both ships, since the boost applies to the whole team
+function drawFrenzyAura(x,y,r){
+  if(frenzyT<=0)return;
+  ctx.save(); ctx.translate(x,y); const t=performance.now()*0.006, R=r*2.1+Math.sin(t*2)*3;
+  ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<6;i++){ const a=t+i/6*TAU; ctx.fillStyle='hsla('+((i/6*360+t*120)%360)+',95%,65%,.5)';
+    ctx.beginPath(); ctx.arc(Math.cos(a)*R*0.5,Math.sin(a)*R*0.5,R*0.5,0,TAU); ctx.fill(); }
+  ctx.restore();
+}
+// wingmen — tiny teacup chihuahua helpers in pink sweaters. Called inside a
+// ctx already translated to the ship's position; drawn for either ship so a
+// teammate's dogs show up too, not just your own.
+function drawWingmen(ship){
+  for(let i=0;i<(ship.wingmen||0);i++){ const sx=(i===0?-44:44), by=-2+Math.sin(performance.now()/280+i*2)*2, R=11;
     const tan='#ecd2a6', tanLine='#b89a6a';
     ctx.save(); ctx.translate(sx,by); ctx.lineJoin='round';
     // sweater body (colour from equipped teammate skin)
@@ -304,6 +305,16 @@ function drawPlayer(){
     ctx.strokeStyle='#7a5a4a'; ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(0,R*0.3); ctx.lineTo(0,R*0.42); ctx.moveTo(0,R*0.42); ctx.arc(-R*0.12,R*0.42,R*0.12,0,Math.PI*0.5); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,R*0.42); ctx.arc(R*0.12,R*0.42,R*0.12,Math.PI*0.5,Math.PI); ctx.stroke();
     ctx.restore(); }
+}
+// ---- player ship: cute Mochi pod ----
+function drawPlayer(){
+  const x=player.x,y=player.y;
+  const blink=player.invuln>0&&Math.floor(player.invuln*12)%2===0;
+  drawFrenzyAura(x,y,player.r);
+  ctx.save(); ctx.translate(x,y); ctx.rotate((player.aimRot||0)+player.tilt);
+  if(traveling)ctx.scale(travelScale,travelScale);
+  if(blink)ctx.globalAlpha=0.4;
+  drawWingmen(player);
   // burst-fire aura (flickering flame ring)
   if(player.burstT>0){ const k=player.burstT<1?player.burstT:1; ctx.save(); ctx.globalCompositeOperation='lighter';
     for(let i=0;i<3;i++){ ctx.strokeStyle='rgba(255,'+(140+i*30)+',60,'+(0.3*k)+')'; ctx.lineWidth=3-i;
@@ -356,6 +367,16 @@ function drawPlayer(){
   ctx.fillStyle='rgba(255,126,179,.7)'; ctx.beginPath(); ctx.arc(-9,1,2.2,0,TAU); ctx.arc(9,1,2.2,0,TAU); ctx.fill();
   ctx.restore();
 }
+// ---- teammate ship (P2) — same companion/overdrive visuals as your own ship ----
+function drawP2(){ const im=sprite('ship'); if(!im||p2.dead&&p2.deadT<=0.6)return;
+  const R=p2.r||19;
+  drawFrenzyAura(p2.x,p2.y,R);
+  ctx.save(); ctx.translate(p2.x,p2.y); if(p2.invuln>0&&Math.floor(performance.now()/80)%2)ctx.globalAlpha=0.4;
+  drawWingmen(p2);
+  ctx.strokeStyle='rgba(126,249,210,.7)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,R+8,0,TAU); ctx.stroke();
+  const fl=10+Math.random()*8; ctx.fillStyle='rgba(143,211,255,.8)'; ctx.beginPath(); ctx.moveTo(-6,R); ctx.lineTo(6,R); ctx.lineTo(0,R+fl); ctx.fill();
+  const d=R*2.6; ctx.drawImage(im,-d/2,-d/2,d,d); ctx.globalAlpha=1;
+  ctx.fillStyle='#7ef9d2'; ctx.font='800 11px "Baloo 2"'; ctx.textAlign='center'; ctx.fillText('P2',0,-R-12); ctx.restore(); }
 
 // ---- accessory overlays (drawn in local space; R = half draw size) ----
 const ANCHORS={ // eyeY/dx = eyes; ear = where an ear sits; top = head crown for hats
@@ -1081,4 +1102,4 @@ function drawPickup(p){
   ctx.restore();
 }
 
-export { PLANET_PRESETS, boltSpr, candySpr, draw, drawAcc, drawCritter, drawGalaxy, drawLeafBig, hexA, lightenHex, pseed, rr, shade, shatterBubble, shipSkinCanvas, ufoBreak };
+export { PLANET_PRESETS, boltSpr, candySpr, draw, drawAcc, drawCritter, drawGalaxy, drawLeafBig, drawP2, hexA, lightenHex, pseed, rr, shade, shatterBubble, shipSkinCanvas, ufoBreak };

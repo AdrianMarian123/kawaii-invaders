@@ -82,6 +82,30 @@ const copii=[];
       return {c0, c1:__dbg.p2.coins}`);
     ok(r.c1>r.c0,'moneda intră în punga lui P2: '+r.c1); }
 
+  // ---- butoanele 🚀/🔥 de pe ecran: fiecare își cheltuie rachetele și burst-ul LUI ----
+  // Click adevărat pe buton, la gazdă și la oaspete. Golim terenul ca racheta să nu lase
+  // cadouri (o rachetă +2 culeasă între timp ar strica numărătoarea).
+  {
+    const curat=`__dbg.enemies.length=0; __dbg.eBullets.length=0; __dbg.pickups.length=0;
+      __dbg.set.frenzy(0); __dbg.set.frenzyT(0); __dbg.set.bossIntro(0);`;
+    const stare=`return {m1:__dbg.player.missiles,b1:__dbg.player.burst,t1:__dbg.player.burstT>0,
+      m2:__dbg.p2.missiles,b2:__dbg.p2.burst,t2:__dbg.p2.burstT>0}`;
+    const arata=r=>'gazda 🚀'+r.m1+' 🔥'+r.b1+(r.t1?'*':'')+' · P2 🚀'+r.m2+' 🔥'+r.b2+(r.t2?'*':'');
+    await hEval(curat+` for(const sh of [__dbg.player,__dbg.p2]){ sh.missiles=3; sh.burst=2; sh.burstT=0; sh.magnet=0; } return null`);
+    await H.click('btnMissile'); await H.click('btnBurst');
+    let r=await hEval(curat+stare);
+    ok(r.m1===2&&r.b1===1&&r.t1,'butoanele gazdei: racheta și burst-ul ei ('+arata(r)+')');
+    ok(r.m2===3&&r.b2===2&&!r.t2,'și nu ating nava oaspetelui ('+arata(r)+')');
+    await G.click('btnMissile'); await G.click('btnBurst');
+    await tick(15);
+    r=await hEval(curat+stare);
+    ok(r.m2===2&&r.b2===1&&r.t2,'butoanele oaspetelui ajung la gazdă pe nava LUI ('+arata(r)+')');
+    ok(r.m1===2&&r.b1===1,'gazda nu pierde nimic din ale ei ('+arata(r)+')');
+    const hud=await gEval("return document.getElementById('missC').textContent+'/'+document.getElementById('burstC').textContent");
+    ok(hud==='2/1','oaspetele își vede pe ecran rachetele și burst-ul rămase: '+hud);
+    await hEval(`for(const sh of [__dbg.player,__dbg.p2]) sh.burstT=0; return null`);
+  }
+
   // ---- ASPECTUL inamicilor: ce vede gazda trebuie sa vada si oaspetele ----
   // Bug-ul de la valul 8: asteroizii ajungeau la oaspete ca pui, fiindca steagul
   // `asteroid` nu calatorea in instantaneu. Testul compara RAMURA DE DESEN, nu campurile.
@@ -174,11 +198,14 @@ const copii=[];
     ok(await inv()===0,'si dupa cadouri (diferenta '+await inv()+')');
 
     // pragul de viata bonus: al fiecaruia, pe scorul lui
-    const lives0=await hEval('return __dbg.p2.lives');
+    // Jocul ruleaza intre timp: daca P2 doboara un inamic in tick-uri, poate trece pragul
+    // singur, iar atunci viata bonus e corecta. Citim scorul si vietile in acelasi eval.
+    const lives0=await hEval('return __dbg.p2.lives'), prag=await hEval('return __dbg.p2.nextLife');
     await hEval('__dbg.addScore(__dbg.p2, __dbg.p2.nextLife-(__dbg.p2.score|0)-10); return null');
     await tick(4);
-    ok(await hEval('return __dbg.p2.lives')===lives0,'sub prag inca nu primeste nimic');
-    await hEval('__dbg.addScore(__dbg.p2,20); return null');
+    { const r=await hEval('return {lives:__dbg.p2.lives, score:__dbg.p2.score|0}');
+      ok(r.score>=prag||r.lives===lives0,'sub prag inca nu primeste nimic'); }
+    await hEval('__dbg.addScore(__dbg.p2, Math.max(0,'+prag+'-(__dbg.p2.score|0))+10); return null');
     await tick(6);
     const lives1=await hEval('return __dbg.p2.lives');
     ok(lives1===lives0+1,'P2 isi ia viata bonus pe scorul LUI: '+lives0+' -> '+lives1);
@@ -198,10 +225,18 @@ const copii=[];
   await wait(300);
   ok(await gEval('return __dbg.player.lives')===5,'oaspetele își vede viețile lui (5), nu pe ale gazdei (2): '+await gEval('return __dbg.player.lives'));
   ok(await gEval('return __dbg.p2.lives')===2,'și separat pe ale gazdei: '+await gEval('return __dbg.p2.lives'));
-  await hEval('__dbg.updateHUD(); return null'); await gEval('__dbg.updateHUD(); return null'); await wait(50);
-  { const hv=await hEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
-    const gv=await gEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
-    const hs=await hEval('return String(__dbg.player.score|0)'), gs=await hEval('return String(__dbg.p2.score|0)');
+  // Jocul merge mai departe intre citiri: daca P2 mai doboara un inamic, scorul de la
+  // gazda o ia inaintea instantaneului ajuns la oaspete. Reincercam pana se potrivesc
+  // (sau 2 s), ca sa nu pice la intamplare pe un calculator mai lent (CI).
+  { let hv,gv,hs,gs;
+    for(let n=0;n<40;n++){
+      await hEval('__dbg.updateHUD(); return null'); await gEval('__dbg.updateHUD(); return null');
+      hv=await hEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
+      gv=await gEval("return document.getElementById('scoreV').textContent.replace(/[^0-9]/g,'')");
+      hs=await hEval('return String(__dbg.player.score|0)'); gs=await hEval('return String(__dbg.p2.score|0)');
+      if(hv===hs&&gv===gs)break;
+      await wait(50);
+    }
     ok(hv===hs,'HUD-ul gazdei arată scorul EI: '+hv);
     ok(gv===gs,'HUD-ul oaspetelui arată scorul LUI: '+gv);
     ok(hv!==gv,'și cele două nu mai sunt același număr'); }
@@ -241,6 +276,16 @@ const copii=[];
   await wait(500);
   { const gMe=await gEval("return document.getElementById('oScoreMe').textContent.replace(/[^0-9]/g,'')");
     ok(gMe===await hEval('return String(__dbg.p2.score|0)'),'oaspetele își vede în coloana lui scorul LUI: '+gMe); }
+  // ---- Etapa 5: oaspetele chiar incaseaza ce a cules ----
+  { const got=await gEval(`return {
+        co: Number(localStorage.getItem('ki_coins')||0),
+        ge: Number(localStorage.getItem('ki_gems')||0) }`);
+    const sent=await hEval('return {co: __dbg.p2.coins|0, ge: __dbg.p2.gems|0}');
+    ok(sent.co===0 || got.co>=sent.co,
+       'monedele oaspetelui ajung in punga lui: a cules '+sent.co+', are '+got.co);
+    ok(sent.ge===0 || got.ge>=sent.ge,
+       'gemurile oaspetelui ajung in punga lui: a cules '+sent.ge+', are '+got.ge); }
+
   ok(await errs()===0,'ecranul final fără erori'+((await errs())?': '+await primaEroare():''));
 
   console.log('\n=== '+pass+' treceri, '+fail+' eșecuri ===');

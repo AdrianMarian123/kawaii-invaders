@@ -294,6 +294,42 @@ const done = (code) => { copii.forEach(c => c.omoara()); try { srv.kill(); } cat
     await g.eval(`__dbg.net.mode='guest'; __dbg.applySnapshot(${JSON.stringify(snap)}); return null`);
     ok(await g.eval('return __dbg.player.wingmen') === 2, 'catelusii gazdei ajung si la oaspete: 2');
 
+    // frenezia e a echipei: oaspetele trebuie sa vada bara si aura
+    const trimite = async (setup) => {
+      const s = await h.eval(`${setup} __dbg.netSnapshot(); return ${ULTIMUL}`);
+      await g.eval(`__dbg.applySnapshot(${JSON.stringify(s)}); return null`);
+      return s;
+    };
+    await trimite(`__dbg.set.frenzy(0.6); __dbg.set.frenzyT(0);`);
+    { const r = await g.eval('return {f:__dbg.frenzy, t:__dbg.frenzyT}');
+      ok(Math.abs(r.f - 0.6) < 0.01 && r.t === 0, 'bara de frenezie ajunge la oaspete: ' + r.f); }
+    await trimite(`__dbg.set.frenzy(1); __dbg.set.frenzyT(4.5);`);
+    { const t = await g.eval('return __dbg.frenzyT');
+      ok(Math.abs(t - 4.5) < 0.01, 'frenezia activa ajunge la oaspete: ' + t); }
+    await h.eval(`__dbg.set.frenzy(0); __dbg.set.frenzyT(0); return null`);
+
+    // fiecare isi vede arma: gloantele AMBELOR nave ajung la oaspete, chiar si cand trag mult
+    { const r = await h.eval(`const d=__dbg, B=[];
+        for(let k=0;k<200;k++) B.push({x:100,y:100+k,r:4,own:d.player});
+        for(let k=0;k<150;k++) B.push({x:d.W-100,y:100+k,r:4,own:d.p2});
+        d.set.bullets(B); d.netSnapshot(); const s=${ULTIMUL};
+        const ids=new Set(s.pb.map(b=>b.i));
+        const ysG=B.filter(b=>b.own===d.p2&&ids.has(b.__nid)).map(b=>b.y);
+        d.set.bullets([]);
+        return {nH:s.pb.filter(b=>b.x<0.5).length, nG:s.pb.filter(b=>b.x>=0.5).length,
+                yMin:Math.min(...ysG), yMax:Math.max(...ysG)}`);
+      ok(r.nH > 0 && r.nG > 0, 'gloantele ambelor nave sunt trimise (gazda ' + r.nH + ', oaspete ' + r.nG + ')');
+      ok(r.nH <= 40 && r.nG <= 40, 'cel mult 40 pe nava');
+      ok(r.yMax - r.yMin > 100, 'gloantele alese sunt rasfirate, nu doar cele vechi: ' + r.yMin + '..' + r.yMax); }
+
+    // laserul si fulgerele nu sunt gloante — trebuie trimise separat
+    await trimite(`__dbg.set.beams([{x:600,w:14,y:1100,r:19}]);
+      __dbg.set.zaps([{x1:600,y1:1100,x2:500,y2:300,life:0.06,max:0.12}]);`);
+    { const r = await g.eval('return {b:__dbg.beams.map(b=>b.y), z:__dbg.zaps.map(z=>z.life/z.max)}');
+      ok(r.b.length === 1 && r.b[0] > 0, 'raza laser ajunge la oaspete');
+      ok(r.z.length === 1 && Math.abs(r.z[0] - 0.5) < 0.01, 'fulgerul (arc/storm) ajunge la oaspete'); }
+    await h.eval(`__dbg.set.beams([]); __dbg.set.zaps([]); return null`);
+
     // monedele: gazda strange, oaspetele le primeste in punga la final
     { const r = await g.eval(`__dbg.set.coins(0); __dbg.runStats.coins=0;
         __dbg.onNetData({t:'over',sc:12345,co:37});
