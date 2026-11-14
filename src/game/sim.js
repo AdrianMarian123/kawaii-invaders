@@ -1121,6 +1121,8 @@ function coopRetry(){
 // Telefonul închide conexiunea când ieși din aplicație — de exemplu ca să trimiți
 // codul pe WhatsApp. La întoarcere reintrăm în aceeași cameră, cu același cod.
 try{ document.addEventListener('visibilitychange', ()=>{
+  // Solo: pune pauza automat cand iesi din aplicatie, ca sa nu mori cat esti in alta parte.
+  if(document.hidden&&net.mode==='off'&&state==='playing')togglePause();
   if(document.hidden||net.stopped||!net.room)return;
   if(!net.ws||net.ws.readyState>1){ net.tries=0; coopOpen(); }
 }); }catch(e){}
